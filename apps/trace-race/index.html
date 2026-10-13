@@ -174,6 +174,9 @@
     @keyframes fade { from { opacity: 0; } }
     .sheet { width: 100%; max-width: 540px; max-height: 88%; overflow-y: auto; overscroll-behavior: contain; background: #151c3c; border: 1px solid var(--line); border-bottom: 0; border-radius: 26px 26px 0 0; padding: 18px 18px calc(22px + var(--sab, 0px)); animation: up 0.25s ease-out; }
     @keyframes up { from { transform: translateY(30px); } }
+    .tr .sheet:focus, .tr .sheet:focus-visible { outline: none; }
+    /* on the website (not the phone app) the frame can be taller than the screen: float the sheet in the middle */
+    @media (min-width: 600px) { html:not(.standalone) .sheet-wrap { align-items: center; padding: 20px; } html:not(.standalone) .sheet { border-radius: 26px; border-bottom: 1px solid var(--line); max-height: 92%; } }
     .sheet h2 { font: 800 24px/1 var(--font-display); }
     .card { border-radius: 18px; background: var(--card); border: 1px solid var(--line); padding: 14px; margin-top: 12px; }
     .card h4 { font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
@@ -734,7 +737,10 @@
       root.querySelectorAll("[data-sheet-body]").forEach(function (el) { el.hidden = el.dataset.sheetBody !== name; });
       $("sheetWrap").classList.add("on"); sheetOn = name;
       history.pushState({ tr: screen, sheet: name }, "");
-      setTimeout(function () { $("sheet").focus(); }, 30);
+      setTimeout(function () {
+        $("sheet").focus({ preventScroll: true });
+        if (!document.documentElement.classList.contains("standalone")) $("sheet").scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }, 30);
       if (name === "help" && !data.help) { data.help = true; save(); }
     }
     function hideSheet() { $("sheetWrap").classList.remove("on"); sheetOn = null; }

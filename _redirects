@@ -1,9 +1,11 @@
 # Old Rails routes -> new site
-/projects   /#apps      301
-/recipes    /           301
-/recipes/*  /           301
-/tutorials  /           301
-/apps/transition   /apps/drift/   301
-/apps/transition/  /apps/drift/   301
+/projects          /#apps              301
+/recipes           /                   301
+/tutorials         /                   301
+/apps/transition   /apps/drift/        301
+/apps/transition/  /apps/drift/        301
+# short link for sharing Trace Race results
 /trace             /apps/trace-race/   302
 /trace/            /apps/trace-race/   302
+# splat rules last
+/recipes/*         /                   301
