@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Drift · drew2apps</title>
+  <meta name="description" content="Drift is an ambient color clock. The screen slowly drifts through color while the time floats on top. Six clock faces, color moods, a night mode, and it runs as your screen saver.">
+  <meta name="theme-color" content="#fbf8f3" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#121016" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/assets/fonts/bricolage.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/css/site.css">
+  <script>
+    // Standalone: ?standalone, an installed web app, or the Android wrapper. Dream: running as the Android screen saver.
+    (function () {
+      var r = document.documentElement, q = location.search;
+      if (/[?&]standalone\b/.test(q) || window.Capacitor || (window.matchMedia && matchMedia("(display-mode: standalone)").matches)) r.classList.add("standalone");
+      if (/[?&]dream\b/.test(q)) r.classList.add("standalone", "dream");
+    })();
+  </script>
+  <style>
+    /* ---------- the clock surface ---------- */
+    .dr {
+      position: relative; width: 100%; height: clamp(440px, 58vw, 660px); overflow: hidden; isolation: isolate;
+      background: #3b3456; color: #fff; user-select: none; -webkit-user-select: none; cursor: pointer;
+      container-type: size; touch-action: manipulation; -webkit-tap-highlight-color: transparent; outline: none;
+      --ink-c: #fff; --sab0: 0px;
+    }
+    .dr:fullscreen { width: 100vw; height: 100vh; }
+    .dr:fullscreen:not(.awake), .dream .dr { cursor: none; }
+    .standalone .dr { position: fixed; inset: 0; height: auto; --sab0: var(--sab); }
+    .standalone body { background: #000; }
+    #cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    .grain { position: absolute; inset: 0; opacity: 0.05; pointer-events: none; background-size: 128px 128px; }
+
+    /* The stage holds the face. In "Inverse" it is difference-blended as one group, so the
+       time is always the exact opposite of the color behind it (the original Transition look). */
+    .dstage { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; transition: transform 3s ease, opacity 1.2s ease, color 1.5s ease; }
+    .ink-inverse .dstage { mix-blend-mode: difference; color: #fff; }
+    .ink-contrast .dstage { color: var(--ink-c); }
+    .ink-contrast .dstage .f { text-shadow: 0 1px 24px rgba(0, 0, 0, 0.12); }
+    .dr.noblend .dstage { mix-blend-mode: normal; color: #fff; }
+    .dr.is-night .dstage { mix-blend-mode: normal; color: #ffc49a; opacity: 0.62; }
+    .night { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity 0.45s linear; }
+
+    .f { display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    .face[data-face="digital"] .f-digital, .face[data-face="minimal"] .f-minimal, .face[data-face="flip"] .f-flip,
+    .face[data-face="analog"] .f-analog, .face[data-face="words"] .f-words { display: flex; }
+    .date { font: 600 max(13px, 2.7cqmin)/1.2 var(--font-body); letter-spacing: 0.06em; opacity: 0.88; }
+    .no-date .date { display: none; }
+
+    /* Digital */
+    .dg { font: 800 min(25cqw, 44cqh)/0.9 "Inter", system-ui, sans-serif; letter-spacing: -0.035em; font-variant-numeric: tabular-nums; display: flex; align-items: baseline; }
+    .dg .colon { margin: 0 0.02em; position: relative; top: -0.07em; }
+    .dg-side { display: flex; flex-direction: column; justify-content: space-between; align-self: stretch; margin-left: 0.12em; padding: 0.06em 0 0.02em; font-size: 0.26em; letter-spacing: 0; }
+    .dg-side b { font-weight: 800; line-height: 1; }
+    .dg-side span { font-weight: 700; font-size: 0.62em; letter-spacing: 0.06em; line-height: 1; }
+    .no-secs .dg-sec { visibility: hidden; }
+    .f-digital .date { margin-top: 2.6cqmin; }
+
+    /* Minimal */
+    .mn { display: flex; gap: 0.18em; font: 100 min(31cqw, 72cqh)/0.82 "Inter", system-ui, sans-serif; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+    .mn span:last-child { font-weight: 300; }
+    .f-minimal .date { margin-top: 4cqmin; text-transform: uppercase; letter-spacing: 0.32em; font-weight: 500; font-size: max(11px, 2.2cqmin); }
+    @container (orientation: portrait) {
+      .mn { flex-direction: column; gap: 0; font-size: min(54cqw, 36cqh); }
+    }
+
+    /* Flip */
+    .fl { display: flex; gap: calc(var(--ch) * 0.22); --ch: min(32cqh, 26cqw); }
+    .secs .fl { --ch: min(26cqh, 17.5cqw); }
+    .fl .grp { display: flex; gap: calc(var(--ch) * 0.06); }
+    .card { position: relative; width: calc(var(--ch) * 0.74); height: var(--ch); perspective: calc(var(--ch) * 5); font: 800 calc(var(--ch) * 0.74)/1 "Inter", system-ui, sans-serif; color: #fff; font-variant-numeric: tabular-nums; }
+    .half, .flap { position: absolute; left: 0; right: 0; height: calc(50% - 0.5px); overflow: hidden; background: rgba(14, 12, 20, 0.5); }
+    .half span, .flap span { position: absolute; left: 0; right: 0; height: calc(200% + 1px); display: flex; align-items: center; justify-content: center; }
+    .top, .ftop { top: 0; border-radius: calc(var(--ch) * 0.09) calc(var(--ch) * 0.09) 0 0; }
+    .bot, .fbot { bottom: 0; border-radius: 0 0 calc(var(--ch) * 0.09) calc(var(--ch) * 0.09); }
+    .top span, .ftop span { top: 0; }
+    .bot span, .fbot span { bottom: 0; }
+    .ftop { transform-origin: 50% 100%; backface-visibility: hidden; z-index: 2; }
+    .fbot { transform-origin: 50% 0; backface-visibility: hidden; z-index: 2; transform: rotateX(90deg); }
+    .card:not(.go) .flap { visibility: hidden; }
+    .card.go .ftop { animation: ftop 0.28s ease-in forwards; }
+    .card.go .fbot { animation: fbot 0.28s 0.26s ease-out forwards; }
+    @keyframes ftop { to { transform: rotateX(-90deg); } }
+    @keyframes fbot { from { transform: rotateX(90deg); } to { transform: rotateX(0); } }
+    .f-flip .date { margin-top: 4cqmin; }
+    .is-night .half, .is-night .flap { background: rgba(0, 0, 0, 0.35); }
+    .is-night .card { color: #ffc49a; }
+
+    /* Analog */
+    .an { width: min(84cqw, 66cqh, 620px); height: min(84cqw, 66cqh, 620px); overflow: visible; }
+    .an rect, .an circle, .an path { fill: currentColor; }
+    .f-analog .date { margin-top: 3.4cqmin; }
+    .no-secs .an .hs { display: none; }
+
+    /* Words */
+    .f-words { max-width: 92cqw; }
+    .w-pre { font: 600 max(14px, 3.6cqmin)/1.1 var(--font-display); letter-spacing: 0.02em; opacity: 0.9; margin-bottom: 1.2cqmin; }
+    .w-main, .w-hour { font: 800 10cqw/0.95 var(--font-display); letter-spacing: -0.02em; white-space: nowrap; }
+    .w-hour { opacity: 0.94; }
+    .f-words .date { margin-top: 3.4cqmin; }
+    .w-swap { transition: opacity 0.6s ease, transform 0.6s ease, filter 0.6s ease; }
+    .w-out .w-swap { opacity: 0; transform: translateY(0.25em); filter: blur(6px); }
+
+    /* ---------- dock (appears on tap / mouse move) ---------- */
+    .dock {
+      position: absolute; left: 50%; bottom: calc(16px + var(--sab0)); z-index: 4; display: flex; align-items: center; gap: 2px;
+      padding: 5px; border-radius: 999px; background: rgba(14, 12, 20, 0.6); color: #fff; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+      opacity: 0; transform: translate(-50%, 14px); pointer-events: none; transition: opacity 0.35s ease, transform 0.35s ease; cursor: default;
+      font: 600 15px/1 var(--font-body); white-space: nowrap; max-width: calc(100% - 20px);
+    }
+    .dr.awake .dock { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+    .dock button { border: 0; background: transparent; color: inherit; height: 42px; min-width: 42px; border-radius: 999px; display: inline-grid; place-items: center; cursor: pointer; font: inherit; padding: 0 10px; }
+    .dock button:hover, .dock button:focus-visible { background: rgba(255, 255, 255, 0.14); }
+    .dock .ic { padding: 0; }
+    .dock svg { width: 21px; height: 21px; }
+    .dock .fname { min-width: 92px; text-align: center; padding: 0 2px; }
+    .dock .sep { width: 1px; height: 22px; background: rgba(255, 255, 255, 0.22); margin: 0 4px; }
+    .dock .mood { display: inline-flex; align-items: center; gap: 8px; }
+    .dock .moon { display: none; width: 16px; height: 16px; color: #ffc49a; }
+    .is-night .dock .moon { display: block; }
+    .is-night .dock .mood i { display: none; }
+    .dock .mood i { width: 16px; height: 16px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.6); }
+    .standalone .dock .web-only { display: none; }
+    @container (max-width: 420px) { .dock .fname { min-width: 74px; } .dock .mood b { display: none; } }
+
+    .hint-pop { position: absolute; left: 50%; top: calc(18px + var(--sat, 0px)); z-index: 4; transform: translateX(-50%); padding: 9px 14px; border-radius: 999px; background: rgba(14, 12, 20, 0.6); color: #fff; font: 600 14px/1 var(--font-body); opacity: 0; transition: opacity 0.4s ease; pointer-events: none; white-space: nowrap; }
+    .hint-pop.on { opacity: 1; }
+
+    /* ---------- settings sheet ---------- */
+    .sheet-wrap { position: absolute; inset: 0; z-index: 6; cursor: default; background: rgba(0, 0, 0, 0.12); }
+    .sheet-wrap[hidden] { display: none; }
+    .sheet {
+      position: absolute; right: 12px; top: 12px; bottom: 12px; width: min(370px, calc(100% - 24px)); overflow-y: auto; overscroll-behavior: contain;
+      background: rgba(20, 18, 27, 0.95); color: #f4f1ea; border-radius: 22px; padding: 16px 18px 24px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+      font: 15px/1.4 var(--font-body); animation: sheet-in 0.28s ease; outline: none;
+    }
+    @keyframes sheet-in { from { opacity: 0; transform: translateX(16px); } }
+    .standalone .sheet { top: calc(12px + var(--sat)); bottom: calc(12px + var(--sab)); right: calc(12px + var(--sar)); }
+    @container (max-width: 640px) {
+      .sheet { left: 0; right: 0 !important; top: auto !important; bottom: 0 !important; width: auto; max-height: 76%; border-radius: 24px 24px 0 0; padding-bottom: calc(26px + var(--sab0)); animation-name: sheet-up; }
+    }
+    @keyframes sheet-up { from { transform: translateY(40px); opacity: 0; } }
+    .sh-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .sh-head h2 { font: 800 24px/1 var(--font-display); }
+    .x { width: 38px; height: 38px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, 0.1); color: #fff; font-size: 22px; cursor: pointer; display: grid; place-items: center; }
+    .sheet section { padding: 14px 0 4px; }
+    .sheet h3 { font: 700 13px/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.12em; color: #a9a3b6; margin-bottom: 10px; display: flex; justify-content: space-between; }
+    .sheet h3 small { text-transform: none; letter-spacing: 0; font-weight: 600; color: #f4f1ea; }
+    .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .tile { border: 1.5px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.05); color: #fff; border-radius: 14px; padding: 8px 4px 9px; cursor: pointer; display: grid; gap: 6px; justify-items: center; font: 600 12.5px/1 var(--font-body); }
+    .tile[aria-pressed="true"] { border-color: #fff; background: rgba(255, 255, 255, 0.12); }
+    .tile .pv { height: 40px; width: 100%; display: grid; place-items: center; border-radius: 9px; background: linear-gradient(135deg, #ff9a7b, #a16cff); color: #fff; overflow: hidden; }
+    .pv-dg { font: 800 19px/1 "Inter"; letter-spacing: -0.03em; }
+    .pv-mn { font: 200 21px/1 "Inter"; letter-spacing: -0.02em; }
+    .pv-fl { display: flex; gap: 2px; } .pv-fl i { width: 13px; height: 19px; border-radius: 3px; background: rgba(0, 0, 0, 0.35); font: 800 13px/19px "Inter"; font-style: normal; text-align: center; }
+    .pv-wd { font: 800 13px/1.05 var(--font-display); }
+    .moods { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .chip { display: flex; align-items: center; gap: 10px; border: 1.5px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.05); color: #fff; border-radius: 12px; padding: 8px 10px; cursor: pointer; font: 600 14px/1 var(--font-body); text-align: left; }
+    .chip[aria-pressed="true"] { border-color: #fff; background: rgba(255, 255, 255, 0.12); }
+    .sw { display: flex; width: 34px; height: 22px; border-radius: 6px; overflow: hidden; flex: none; }
+    .sw i { flex: 1; }
+    .seg { display: flex; background: rgba(255, 255, 255, 0.07); border-radius: 12px; padding: 3px; gap: 3px; }
+    .seg button { flex: 1; border: 0; background: transparent; color: #d9d4e2; padding: 10px 6px; border-radius: 9px; font: 600 14px/1 var(--font-body); cursor: pointer; }
+    .seg button[aria-pressed="true"] { background: #f4f1ea; color: #16131c; }
+    .sheet input[type="range"] { width: 100%; accent-color: #f4f1ea; }
+    .ends { display: flex; justify-content: space-between; font-size: 12.5px; color: #a9a3b6; margin-top: 2px; }
+    .hint { color: #a9a3b6; font-size: 13px; margin-top: 8px; }
+    .tg { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-top: 1px solid rgba(255, 255, 255, 0.07); font-weight: 600; cursor: pointer; }
+    .tg:first-of-type { margin-top: 10px; }
+    .sw-t { width: 44px; height: 26px; border-radius: 13px; background: rgba(255, 255, 255, 0.18); position: relative; flex: none; border: 0; cursor: pointer; transition: background 0.2s; }
+    .sw-t::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform 0.2s; }
+    .sw-t[aria-checked="true"] { background: #3d9a6f; }
+    .sw-t[aria-checked="true"]::after { transform: translateX(18px); }
+    .nrow { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-weight: 600; color: #d9d4e2; }
+    .nrow[hidden] { display: none; }
+    .nrow select { background: rgba(255, 255, 255, 0.08); color: #fff; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 9px; padding: 8px; font: 600 14px var(--font-body); }
+    .nrow option { color: #16131c; }
+    .wide { width: 100%; margin-top: 10px; padding: 12px; border: 0; border-radius: 12px; background: #f4f1ea; color: #16131c; font: 700 15px/1 var(--font-body); cursor: pointer; }
+    .about { display: flex; align-items: center; gap: 12px; margin-top: 18px; padding-top: 16px !important; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+    .about img { width: 46px; height: 46px; border-radius: 12px; }
+    .about b { display: block; font: 800 18px/1.1 var(--font-display); }
+    .about span { color: #a9a3b6; font-size: 13px; }
+    .pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .pills a { padding: 9px 13px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); color: #f4f1ea; text-decoration: none; font: 600 13.5px/1 var(--font-body); }
+    .pills a:hover { background: rgba(255, 255, 255, 0.16); }
+    .dream .dock, .dream .sheet-wrap, .dream .hint-pop { display: none !important; }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="logo" href="/" aria-label="drew2apps home">drew<span class="two">2</span>apps</a>
+      <nav class="nav" aria-label="Main">
+        <a href="/#apps" aria-current="page">Apps</a>
+        <a href="/blog/">Thoughts</a>
+        <a href="/about/">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="app-page">
+    <div class="wrap">
+      <a class="back" href="/#apps">← All apps</a>
+      <div class="app-top">
+        <div>
+          <h1>Drift</h1>
+          <p class="tag">An ambient color clock. The screen slowly drifts through color while the time floats on top.</p>
+        </div>
+        <button class="btn btn-ghost" type="button" id="fs">Fullscreen</button>
+      </div>
+
+      <div class="app-frame">
+        <div class="dr ink-inverse" id="dr" tabindex="0" aria-label="Drift clock. Tap for a new color, swipe for a new face.">
+          <canvas id="cv" aria-hidden="true"></canvas>
+          <div class="grain" id="grain"></div>
+          <div class="dstage" id="stage" aria-live="off">
+            <div class="face" id="face" data-face="digital">
+              <div class="f f-digital">
+                <div class="dg"><span id="dgH">12</span><span class="colon">:</span><span id="dgM">00</span><span class="dg-side"><b class="dg-sec" id="dgS">00</b><span id="dgAp">PM</span></span></div>
+                <div class="date" id="dgDate"></div>
+              </div>
+              <div class="f f-minimal">
+                <div class="mn"><span id="mnH">12</span><span id="mnM">00</span></div>
+                <div class="date" id="mnDate"></div>
+              </div>
+              <div class="f f-flip">
+                <div class="fl" id="fl"></div>
+                <div class="date" id="flDate"></div>
+              </div>
+              <div class="f f-analog"><svg class="an" id="an" viewBox="-100 -100 200 200" aria-hidden="true"></svg><div class="date" id="anDate"></div></div>
+              <div class="f f-words">
+                <div class="w-swap w-pre" id="wPre">it's</div>
+                <div class="w-swap w-main" id="wMain">twelve</div>
+                <div class="w-swap w-hour" id="wHour"></div>
+                <div class="date" id="wDate"></div>
+              </div>
+            </div>
+          </div>
+          <div class="night" id="night"></div>
+          <div class="hint-pop" id="pop"></div>
+
+          <div class="dock" id="dock" role="toolbar" aria-label="Drift controls">
+            <button class="ic" type="button" id="prevFace" aria-label="Previous face"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+            <span class="fname" id="faceName">Digital</span>
+            <button class="ic" type="button" id="nextFace" aria-label="Next face"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+            <i class="sep"></i>
+            <button type="button" class="mood" id="moodBtn" aria-label="Next color mood"><i id="moodDot"></i><b id="moodName">Random</b><svg class="moon" viewBox="0 0 24 24" fill="currentColor" aria-label="Night mode on"><path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1z"/></svg></button>
+            <i class="sep"></i>
+            <button class="ic" type="button" id="setBtn" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
+            <button class="ic web-only" type="button" id="fsDock" aria-label="Fullscreen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+          </div>
+
+          <div class="sheet-wrap" id="sheetWrap" hidden>
+            <aside class="sheet" id="sheet" role="dialog" aria-label="Drift settings" tabindex="-1">
+              <div class="sh-head"><h2>Drift</h2><button class="x" type="button" id="shClose" aria-label="Close">×</button></div>
+              <section><h3>Face</h3><div class="tiles" id="faceTiles"></div></section>
+              <section><h3>Colors</h3><div class="moods" id="moodChips"></div></section>
+              <section><h3>Style</h3>
+                <div class="seg" data-k="style"><button type="button" data-v="solid">Solid</button><button type="button" data-v="gradient">Gradient</button><button type="button" data-v="glow">Glow</button></div>
+              </section>
+              <section><h3>Pace <small id="paceLbl"></small></h3>
+                <input type="range" id="pace" min="0" max="100" aria-label="Pace">
+                <div class="ends"><span>Calm</span><span>Lively</span></div>
+              </section>
+              <section><h3>Clock</h3>
+                <div class="seg" data-k="ink"><button type="button" data-v="inverse">Inverse</button><button type="button" data-v="contrast">Contrast</button></div>
+                <p class="hint" id="inkHint">Inverse draws the time in the exact opposite of the color behind it, like the original Transition.</p>
+                <div class="tg" data-t="h24">24-hour time <button type="button" class="sw-t" role="switch" aria-label="24-hour time"></button></div>
+                <div class="tg" data-t="secs">Seconds <button type="button" class="sw-t" role="switch" aria-label="Seconds"></button></div>
+                <div class="tg" data-t="date">Date <button type="button" class="sw-t" role="switch" aria-label="Date"></button></div>
+              </section>
+              <section><h3>Night mode</h3>
+                <div class="seg" data-k="night"><button type="button" data-v="off">Off</button><button type="button" data-v="auto">Auto</button><button type="button" data-v="on">On</button></div>
+                <p class="hint" id="nightNow" style="color:#ffc49a"></p>
+                <div class="nrow" id="nRow">From <select id="nFrom" aria-label="Night starts"></select> to <select id="nTo" aria-label="Night ends"></select></div>
+                <p class="hint">Dims the screen and warms the colors. Drift also nudges the clock a few pixels every minute so it never burns into the screen.</p>
+              </section>
+              <section id="ssSec" hidden><h3>Screen saver</h3>
+                <p class="hint" style="margin-top:0">Drift can run as your phone's screen saver while it charges. Pick <b>Drift</b> in the screen saver settings.</p>
+                <button type="button" class="wide" id="ssBtn">Open screen saver settings</button>
+              </section>
+              <section class="about"><img src="/assets/img/drift-icon.png" alt=""><div><b>Drift</b><span>Version 2.0.0 · formerly Transition</span></div></section>
+              <div class="pills"><a href="https://drew2apps.com/">drew2apps.com</a><a href="https://drew2apps.com/privacy/">Privacy policy</a><a href="mailto:drew@drew2apps.com?subject=Drift%20app">Send feedback</a></div>
+            </aside>
+          </div>
+        </div>
+      </div>
+
+      <p class="app-notes"><strong>Formerly Transition</strong>, an Android app from 2015. Tap for a new color, swipe or use the arrow keys to change the clock face, and open the controls to pick a color mood. Great on an old tablet, a spare monitor or a nightstand. Press F for fullscreen.</p>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <span>© <span data-year>2026</span> Drew Carlson · Made in San Diego</span>
+      <span><a href="/about/">About</a> · <a href="/privacy/">Privacy</a> · <a href="mailto:drew@drew2apps.com">drew@drew2apps.com</a></span>
+    </div>
+  </footer>
+  <div class="rgb-bar" aria-hidden="true"><i style="background:var(--red)"></i><i style="background:var(--green)"></i><i style="background:var(--blue)"></i></div>
+
+  <script src="/assets/js/site.js" defer></script>
+  <script>
+  (function () {
+    "use strict";
+    var $ = function (id) { return document.getElementById(id); };
+    var root = document.documentElement;
+    var STANDALONE = root.classList.contains("standalone"), DREAM = root.classList.contains("dream"), CAP = !!window.Capacitor;
+    var dr = $("dr"), cv = $("cv"), ctx = cv.getContext("2d", { alpha: false }), stage = $("stage"), face = $("face");
+
+    /* ---------------- settings ---------------- */
+    var FACES = [["digital", "Digital"], ["minimal", "Minimal"], ["flip", "Flip"], ["analog", "Analog"], ["words", "Words"], ["none", "Color only"]];
+    var MOODS = {
+      random:   { name: "Random" },
+      sky:      { name: "Sky" },
+      sunset:   { name: "Sunset",   L: [0.56, 0.8],  C: [0.12, 0.2],  H: [-18, 72] },
+      ocean:    { name: "Ocean",    L: [0.38, 0.78], C: [0.06, 0.15], H: [178, 262] },
+      forest:   { name: "Forest",   L: [0.33, 0.72], C: [0.06, 0.15], H: [100, 168] },
+      neon:     { name: "Neon",     L: [0.62, 0.84], C: [0.2, 0.33],  H: [0, 360] },
+      pastel:   { name: "Pastel",   L: [0.86, 0.94], C: [0.04, 0.09], H: [0, 360] },
+      midnight: { name: "Midnight", L: [0.17, 0.33], C: [0.04, 0.12], H: [215, 320] }
+    };
+    var MOOD_ORDER = ["random", "sky", "sunset", "ocean", "forest", "neon", "pastel", "midnight"];
+    var DEF = { face: "digital", mood: "random", style: "gradient", pace: 55, ink: "inverse", h24: false, secs: true, date: true, night: STANDALONE ? "auto" : "off", nFrom: 22, nTo: 7 };
+    var S = Object.assign({}, DEF);
+    try {
+      var raw = localStorage.getItem("drift-v2");
+      if (raw) Object.assign(S, JSON.parse(raw));
+      else {
+        var old = JSON.parse(localStorage.getItem("transition-opts2") || "null"); // the 2026 web version of Transition
+        if (old) {
+          if (old.speed != null) S.pace = clamp(Math.round(100 * Math.log(Math.max(1.5, old.speed * 0.36 + 1) / 40) / Math.log(1.5 / 40)), 0, 100);
+          if (old.style === "classic") S.style = "solid";
+          if (old.clock === "off") S.face = "none";
+          if (old.fmt === "24") S.h24 = true;
+          if (old.date === "off") S.date = false;
+        }
+      }
+    } catch (e) {}
+    if (!MOODS[S.mood]) S.mood = "random";
+    if (!FACES.some(function (f) { return f[0] === S.face; })) S.face = "digital";
+    function save() { try { localStorage.setItem("drift-v2", JSON.stringify(S)); } catch (e) {} }
+
+    /* ---------------- color math (OKLab) ---------------- */
+    function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+    function toLin(c) { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+    function toSrgb(x) { x = x <= 0.0031308 ? 12.92 * x : 1.055 * Math.pow(x, 1 / 2.4) - 0.055; return Math.round(clamp(x, 0, 1) * 255); }
+    function rgb2lab(c) {
+      var r = toLin(c[0]), g = toLin(c[1]), b = toLin(c[2]);
+      var l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b), m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b), s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+      return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s, 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s, 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s];
+    }
+    function lab2lin(c) {
+      var l = c[0] + 0.3963377774 * c[1] + 0.2158037573 * c[2], m = c[0] - 0.1055613458 * c[1] - 0.0638541728 * c[2], s = c[0] - 0.0894841775 * c[1] - 1.291485548 * c[2];
+      l = l * l * l; m = m * m * m; s = s * s * s;
+      return [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s, -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s];
+    }
+    function lab2rgb(c) { var v = lab2lin(c); return [toSrgb(v[0]), toSrgb(v[1]), toSrgb(v[2])]; }
+    function inGamut(c) { var v = lab2lin(c); return v[0] > -1e-4 && v[0] < 1.0001 && v[1] > -1e-4 && v[1] < 1.0001 && v[2] > -1e-4 && v[2] < 1.0001; }
+    function lch(L, C, hDeg) { // OKLCH -> OKLab, pulling chroma in until it fits sRGB
+      var h = hDeg * Math.PI / 180, lo = 0, hi = C, c = [L, C * Math.cos(h), C * Math.sin(h)];
+      if (inGamut(c)) return c;
+      for (var i = 0; i < 14; i++) { var mid = (lo + hi) / 2; c = [L, mid * Math.cos(h), mid * Math.sin(h)]; if (inGamut(c)) lo = mid; else hi = mid; }
+      return [L, lo * Math.cos(h), lo * Math.sin(h)];
+    }
+    function mix(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; }
+    function css(c, a) { var v = lab2rgb(c); return a == null ? "rgb(" + v[0] + "," + v[1] + "," + v[2] + ")" : "rgba(" + v[0] + "," + v[1] + "," + v[2] + "," + a + ")"; }
+    function hexLab(h) { return rgb2lab([parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]); }
+    var R = Math.random;
+    function rr(a, b, rnd) { return a + (rnd || R)() * (b - a); }
+
+    // Sky: the real time of day. [hour, top, horizon, glow]
+    var SKY = [
+      [0, "#0a0f2a", "#1a1d48", "#2b2867"], [4.6, "#121034", "#33275a", "#55356f"], [6, "#2a2d68", "#e9866e", "#f6b98a"],
+      [7.4, "#5b97d5", "#f5d3a8", "#ffd27e"], [10, "#4a8ede", "#9dcdf3", "#cfe8ff"], [13, "#3a86de", "#88c4f1", "#d8efff"],
+      [16.4, "#4782cf", "#a7ccec", "#ffe0a6"], [18.4, "#4a4c97", "#ee8659", "#f7b267"], [19.6, "#2b2a68", "#b04d78", "#e1795d"],
+      [21, "#131a40", "#2a2a68", "#463c88"], [24, "#0a0f2a", "#1a1d48", "#2b2867"]
+    ].map(function (k) { return [k[0], hexLab(k[1]), hexLab(k[2]), hexLab(k[3])]; });
+    function skyAt(hours, role) {
+      for (var i = 0; i < SKY.length - 1 && SKY[i + 1][0] <= hours; i++);
+      var a = SKY[i], b = SKY[Math.min(i + 1, SKY.length - 1)], t = b[0] > a[0] ? (hours - a[0]) / (b[0] - a[0]) : 0;
+      t = t * t * (3 - 2 * t);
+      var k = role === 0 ? 1 : role === 1 ? 2 : 3;
+      return mix(a[k], b[k], t);
+    }
+    function hoursNow() { var d = new Date(); return d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600; }
+    function jitter(c, amt) { return [c[0] + rr(-amt, amt) * 0.6, c[1] + rr(-amt, amt) * 0.35, c[2] + rr(-amt, amt) * 0.35]; }
+
+    function moodColor(mood, role, rnd) {
+      rnd = rnd || R;
+      if (mood === "random") return rgb2lab([rnd() * 256 | 0, rnd() * 256 | 0, rnd() * 256 | 0]);
+      if (mood === "sky") return jitter(skyAt(hoursNow(), role > 2 ? 2 : role), 0.03);
+      var m = MOODS[mood], h = rr(m.H[0], m.H[1], rnd);
+      return lch(rr(m.L[0], m.L[1], rnd), rr(m.C[0], m.C[1], rnd), (h + 360) % 360);
+    }
+
+    /* ---------------- color slots ---------------- */
+    // Five independently fading colors: 0 = base, 1 = gradient partner, 2-4 = glow blobs.
+    function fadeMs() { return 40000 * Math.pow(1.5 / 40, S.pace / 100); }
+    var slots = [];
+    var t0 = performance.now();
+    for (var i = 0; i < 5; i++) { var c0 = moodColor(S.mood, i); slots.push({ from: c0, to: c0, t0: t0, dur: 1, hold: 1500 + i * 400 }); }
+    for (i = 0; i < 5; i++) slots[i].from = slots[i].to = pick(i);
+    function cur(s, now) { var p = clamp((now - s.t0) / s.dur, 0, 1); var e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2; return mix(s.from, s.to, e); }
+    // "Inverse" text is hard to read on mid-tones (grey's opposite is grey), so when it's on we
+    // re-roll colors whose opposite would be too close in brightness, including the middle of a gradient.
+    function lumOf(rgb) { return 0.2126 * toLin(rgb[0]) + 0.7152 * toLin(rgb[1]) + 0.0722 * toLin(rgb[2]); }
+    function invContrast(c) { var v = lab2rgb(c), a = lumOf(v), b = lumOf([255 - v[0], 255 - v[1], 255 - v[2]]); return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05); }
+    function inverseInk() { return S.ink === "inverse" && S.mood !== "sky"; }
+    function pick(i) {
+      var c = moodColor(S.mood, i);
+      if (!inverseInk()) return c;
+      var other = slots[i === 1 ? 0 : 1];
+      for (var k = 0; k < 30; k++) {
+        if (invContrast(c) >= 2.4 && (i > 1 || !other || invContrast(mix(c, other.to, 0.5)) >= 2.1)) break;
+        c = moodColor(S.mood, i);
+      }
+      return c;
+    }
+    function retarget(i, now, quick) {
+      var s = slots[i];
+      s.from = cur(s, now); s.to = pick(i); s.t0 = now;
+      if (quick) { s.dur = 420 + i * 60; s.hold = 250; return; }
+      var base = S.mood === "sky" ? 24000 : fadeMs();
+      s.dur = base * (i ? rr(0.85, 1.35) : 1) + R() * 2000;   // like the original: fade time plus up to 2s of randomness
+      s.hold = Math.min(2000, R() * s.dur * 0.3);              // then a short pause
+    }
+    function jump() { var now = performance.now(); for (var i = 0; i < slots.length; i++) retarget(i, now, true); }
+
+    /* ---------------- night mode ---------------- */
+    var nTarget = 0, nVal = 0;
+    function inNight() {
+      if (S.night === "on") return true;
+      if (S.night !== "auto") return false;
+      var h = new Date().getHours();
+      return S.nFrom > S.nTo ? (h >= S.nFrom || h < S.nTo) : (h >= S.nFrom && h < S.nTo);
+    }
+    function nightize(c, n) {
+      if (n < 0.002) return c;
+      var C = Math.hypot(c[1], c[2]), h = Math.atan2(c[2], c[1]), H = 50 * Math.PI / 180;
+      var d = Math.atan2(Math.sin(H - h), Math.cos(H - h)), h2 = h + d * 0.35, C2 = Math.min(C * 0.8 + 0.015, 0.1);
+      return mix(c, [0.16 + c[0] * 0.24, C2 * Math.cos(h2), C2 * Math.sin(h2)], n);
+    }
+    function hourName(h) { return (h % 12 || 12) + (h < 12 ? " AM" : " PM"); }
+    function nightNote() { return S.night === "on" ? "Night mode is on" : "Night mode until " + hourName(S.nTo); }
+    function checkNight(quiet) {
+      var was = nTarget;
+      nTarget = inNight() ? 1 : 0;
+      dr.classList.toggle("is-night", nTarget === 1);
+      if (nTarget === 1 && was === 0 && !quiet) pop(nightNote(), true);
+      var nn = $("nightNow"); if (nn) nn.textContent = nTarget ? nightNote() + ". Colors are dimmed and warmer." : "";
+    }
+
+    /* ---------------- drawing ---------------- */
+    // A small canvas, scaled up by the GPU. Blending colors in OKLab keeps fades vivid instead of going grey.
+    var W = 0, H = 0;
+    function sizeCanvas() {
+      var r = dr.getBoundingClientRect(); if (!r.width || !r.height) return;
+      var k = 9; W = Math.max(24, Math.ceil(r.width / k)); H = Math.max(24, Math.ceil(r.height / k));
+      if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+    }
+    var blobs = [0, 1, 2].map(function () { return { a: R() * 6.28, b: R() * 6.28, fx: rr(0.6, 1), fy: rr(0.6, 1), r: rr(0.5, 0.75) }; });
+    var labs = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]];
+    var lastInk = 0;
+    function draw(now) {
+      var i, t = now / 1000, motion = 0.35 + S.pace / 140;
+      for (i = 0; i < 5; i++) {
+        var s = slots[i];
+        if (now >= s.t0 + s.dur + s.hold) retarget(i, now);
+        labs[i] = nightize(cur(s, now), nVal);
+      }
+      if (S.style === "solid") { ctx.fillStyle = css(labs[0]); ctx.fillRect(0, 0, W, H); }
+      else if (S.style === "gradient") {
+        var ang = S.mood === "sky" ? Math.PI / 2 : 0.8 + t * motion * 2 * Math.PI / 160;
+        var cx = W / 2, cy = H / 2, rad = Math.hypot(W, H) / 2, dx = Math.cos(ang) * rad, dy = Math.sin(ang) * rad;
+        var g = ctx.createLinearGradient(cx - dx, cy - dy, cx + dx, cy + dy);
+        for (i = 0; i <= 4; i++) g.addColorStop(i / 4, css(mix(labs[0], labs[1], i / 4)));
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      } else {
+        var g0 = ctx.createLinearGradient(0, 0, 0, H);
+        g0.addColorStop(0, css(labs[0])); g0.addColorStop(1, css(mix(labs[0], labs[1], 0.6)));
+        ctx.fillStyle = g0; ctx.fillRect(0, 0, W, H);
+        var big = Math.max(W, H);
+        for (i = 0; i < 3; i++) {
+          var b = blobs[i], x = W * (0.5 + 0.42 * Math.sin(t * motion * 0.11 * b.fx + b.a)), y;
+          y = S.mood === "sky" ? H * (0.78 + 0.18 * Math.sin(t * motion * 0.07 * b.fy + b.b)) : H * (0.5 + 0.42 * Math.sin(t * motion * 0.09 * b.fy + b.b));
+          var r = big * (b.r + 0.08 * Math.sin(t * 0.2 * motion + b.a)), col = labs[i + 2];
+          var rg = ctx.createRadialGradient(x, y, 0, x, y, r);
+          rg.addColorStop(0, css(col, 0.95)); rg.addColorStop(0.5, css(col, 0.5)); rg.addColorStop(1, css(col, 0));
+          ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H);
+        }
+      }
+      // "Contrast" text: pick black or white from how light the screen is right now
+      if (now - lastInk > 400) {
+        lastInk = now;
+        var L = S.style === "solid" ? labs[0][0] : S.style === "gradient" ? (labs[0][0] + labs[1][0]) / 2 : (labs[0][0] * 0.4 + (labs[2][0] + labs[3][0] + labs[4][0]) * 0.2);
+        dr.style.setProperty("--ink-c", L > 0.7 ? "#15131b" : "#ffffff");
+        $("night").style.opacity = (nVal * 0.42).toFixed(3);
+        $("moodDot").style.background = css(labs[0]);
+      }
+    }
+    var lastFrame = 0, raf = 0;
+    function loop(now) {
+      raf = requestAnimationFrame(loop);
+      if (now - lastFrame < 32) return; // ~30 fps is plenty for slow color
+      var dt = now - lastFrame; lastFrame = now;
+      nVal += (nTarget - nVal) * Math.min(1, dt / 1500);
+      draw(now);
+      if (S.face === "analog") hands();
+    }
+
+    /* ---------------- faces ---------------- */
+    function pad(n) { return (n < 10 ? "0" : "") + n; }
+    function hour12(h) { return h % 12 || 12; }
+    function set(id, v) { var el = $(id); if (el.textContent !== v) el.textContent = v; }
+    var dateFmt = { weekday: "long", month: "long", day: "numeric" };
+
+    // flip cards
+    var cards = [];
+    function buildFlip() {
+      var fl = $("fl"); fl.innerHTML = ""; cards = [];
+      var groups = S.secs ? 3 : 2;
+      for (var g = 0; g < groups; g++) {
+        var grp = document.createElement("div"); grp.className = "grp";
+        for (var k = 0; k < 2; k++) {
+          var el = document.createElement("div"); el.className = "card";
+          el.innerHTML = '<div class="half top"><span></span></div><div class="half bot"><span></span></div><div class="flap ftop"><span></span></div><div class="flap fbot"><span></span></div>';
+          grp.appendChild(el);
+          var sp = el.querySelectorAll("span");
+          cards.push({ el: el, top: sp[0], bot: sp[1], ftop: sp[2], fbot: sp[3], d: null, timer: 0 });
+        }
+        fl.appendChild(grp);
+      }
+    }
+    function setCard(c, d) {
+      if (c.d === d) return;
+      var prev = c.d; c.d = d;
+      if (prev == null || document.hidden) { c.top.textContent = c.bot.textContent = c.ftop.textContent = c.fbot.textContent = d; c.el.classList.remove("go"); return; }
+      c.top.textContent = d; c.ftop.textContent = prev; c.fbot.textContent = d; c.bot.textContent = prev;
+      c.el.classList.remove("go"); void c.el.offsetWidth; c.el.classList.add("go");
+      clearTimeout(c.timer); c.timer = setTimeout(function () { c.bot.textContent = d; c.el.classList.remove("go"); }, 580);
+    }
+
+    // analog dial
+    var an = $("an"), hH, hM, hS;
+    (function buildDial() {
+      // 12 rounded hour markers (longer at 12/3/6/9), small dots for the minutes, tapered hands.
+      var s = "";
+      for (var i = 0; i < 60; i++) {
+        var deg = i * 6;
+        if (i % 5 === 0) {
+          var big = i % 15 === 0, w = big ? 4.8 : 3.6, len = big ? 15 : 10.5;
+          s += '<rect x="' + (-w / 2) + '" y="-93" width="' + w + '" height="' + len + '" rx="' + (w / 2) + '" transform="rotate(' + deg + ')"/>';
+        } else {
+          s += '<circle cx="0" cy="-90.5" r="1.15" transform="rotate(' + deg + ')"/>';
+        }
+      }
+      s += '<g class="hh"><path d="M-4.3 6 L-2.6 -45 Q0 -50 2.6 -45 L4.3 6 Q0 9 -4.3 6Z"/></g>';
+      s += '<g class="hm"><path d="M-3.1 6 L-1.6 -72 Q0 -77 1.6 -72 L3.1 6 Q0 8.5 -3.1 6Z"/></g>';
+      s += '<circle r="5.6"/>';
+      s += '<g class="hs"><rect x="-0.75" y="-83" width="1.5" height="101" rx="0.75"/><circle r="3"/></g>';
+      an.innerHTML = s;
+      hH = an.querySelector(".hh"); hM = an.querySelector(".hm"); hS = an.querySelector(".hs");
+    })();
+    function hands() {
+      var d = new Date(), ms = d.getMilliseconds(), sec = d.getSeconds() + ms / 1000, min = d.getMinutes() + sec / 60, hr = (d.getHours() % 12) + min / 60;
+      hH.setAttribute("transform", "rotate(" + (hr * 30).toFixed(2) + ")");
+      hM.setAttribute("transform", "rotate(" + (min * 6).toFixed(2) + ")");
+      hS.setAttribute("transform", "rotate(" + (sec * 6).toFixed(2) + ")");
+    }
+
+    // words
+    var NUM = ["twelve", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven"];
+    var REL = { 5: "five past", 10: "ten past", 15: "quarter past", 20: "twenty past", 25: "twenty-five past", 30: "half past", 35: "twenty-five to", 40: "twenty to", 45: "quarter to", 50: "ten to", 55: "five to" };
+    function phrase(d) {
+      var h = d.getHours(), m = d.getMinutes(), r = Math.round(m / 5) * 5, diff = m - r;
+      var pre = diff === 0 ? "it's" : diff < 0 ? "it's almost" : "it's just after";
+      if (r === 60) { r = 0; h = (h + 1) % 24; }
+      var hh = r > 30 ? (h + 1) % 24 : h;
+      var hw = hh === 0 ? "midnight" : hh === 12 ? "noon" : NUM[hh % 12];
+      if (!r) return [pre, hw === "midnight" || hw === "noon" ? hw : hw + " o'clock", ""];
+      return [pre, REL[r], hw];
+    }
+    var lastWords = "";
+    function fit(el, txt, maxCqh) { el.style.fontSize = "min(" + (92 / Math.max(4, txt.length * 0.56)).toFixed(2) + "cqw, " + maxCqh + "cqh)"; }
+    function renderWords(d, force) {
+      var p = phrase(d), key = p.join("|");
+      if (key === lastWords && !force) return;
+      var fw = face.querySelector(".f-words"), first = !lastWords || force;
+      lastWords = key;
+      var apply = function () {
+        set("wPre", p[0]); set("wMain", p[1]); set("wHour", p[2]); $("wHour").hidden = !p[2];
+        var longest = p[2] && p[2].length > p[1].length ? p[2] : p[1];
+        fit($("wMain"), longest, 22); fit($("wHour"), longest, 22);
+        fw.classList.remove("w-out");
+      };
+      if (first || document.hidden) apply(); else { fw.classList.add("w-out"); setTimeout(apply, 620); }
+    }
+
+    function render(force) {
+      var d = new Date(), h = d.getHours(), m = d.getMinutes(), s = d.getSeconds();
+      var hs = S.h24 ? pad(h) : String(hour12(h)), ds = d.toLocaleDateString(undefined, dateFmt);
+      switch (S.face) {
+        case "digital":
+          set("dgH", hs); set("dgM", pad(m)); set("dgS", pad(s)); set("dgAp", S.h24 ? "" : (h < 12 ? "AM" : "PM")); set("dgDate", ds); break;
+        case "minimal":
+          set("mnH", S.h24 ? pad(h) : String(hour12(h))); set("mnM", pad(m)); set("mnDate", ds); break;
+        case "flip":
+          var str = (S.h24 ? pad(h) : pad(hour12(h))) + pad(m) + (S.secs ? pad(s) : "");
+          if (cards.length !== str.length || force) buildFlip();
+          for (var i = 0; i < cards.length; i++) setCard(cards[i], str[i]);
+          set("flDate", ds); break;
+        case "analog":
+          set("anDate", ds); hands(); break;
+        case "words":
+          renderWords(d, force); set("wDate", ds); break;
+      }
+    }
+    var tickTimer = 0;
+    function tick() { render(); clearTimeout(tickTimer); tickTimer = setTimeout(tick, 1000 - (Date.now() % 1000) + 5); }
+
+    // burn-in protection: drift the clock a few pixels every minute
+    function nudge() {
+      var r = Math.min(dr.clientWidth, dr.clientHeight) * 0.012 + 3;
+      stage.style.transform = "translate(" + rr(-r, r).toFixed(1) + "px," + rr(-r, r).toFixed(1) + "px)";
+    }
+
+    /* ---------------- apply settings ---------------- */
+    var faceIdx = function () { for (var i = 0; i < FACES.length; i++) if (FACES[i][0] === S.face) return i; return 0; };
+    function applyAll() {
+      face.dataset.face = S.face;
+      dr.classList.toggle("ink-inverse", inverseInk());
+      dr.classList.toggle("ink-contrast", !inverseInk());
+      dr.classList.toggle("noblend", S.face === "flip");
+      dr.classList.toggle("no-secs", !S.secs);
+      dr.classList.toggle("secs", S.secs);
+      dr.classList.toggle("no-date", !S.date);
+      set("faceName", FACES[faceIdx()][1]);
+      set("moodName", MOODS[S.mood].name);
+      checkNight();
+      render(true);
+      syncSheet();
+    }
+    function setFace(dir) {
+      var i = (faceIdx() + dir + FACES.length) % FACES.length;
+      S.face = FACES[i][0]; save(); applyAll(); pop(FACES[i][1]);
+    }
+    function setMood(m) { S.mood = m; save(); jump(); applyAll(); }
+    var popT = 0;
+    function pop(txt, always) { if (DREAM || (!always && dr.classList.contains("awake"))) return; var p = $("pop"); p.textContent = txt; p.classList.add("on"); clearTimeout(popT); popT = setTimeout(function () { p.classList.remove("on"); }, always ? 2600 : 1300); }
+
+    /* ---------------- settings sheet ---------------- */
+    var wrap = $("sheetWrap"), sheetOpen = false;
+    (function buildSheet() {
+      var tiles = $("faceTiles"), pv = {
+        digital: '<span class="pv-dg">10:24</span>', minimal: '<span class="pv-mn">10 24</span>',
+        flip: '<span class="pv-fl"><i>1</i><i>0</i><i>2</i><i>4</i></span>',
+        analog: '<svg width="30" height="30" viewBox="-20 -20 40 40"><circle r="17" fill="none" stroke="#fff" stroke-width="2"/><line x1="0" y1="0" x2="-7" y2="-6" stroke="#fff" stroke-width="3" stroke-linecap="round"/><line x1="0" y1="0" x2="5" y2="-12" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>',
+        words: '<span class="pv-wd">ten past<br>twelve</span>', none: ""
+      };
+      FACES.forEach(function (f) {
+        var b = document.createElement("button"); b.type = "button"; b.className = "tile"; b.dataset.face = f[0];
+        b.innerHTML = '<span class="pv">' + pv[f[0]] + "</span>" + f[1];
+        b.addEventListener("click", function () { S.face = f[0]; save(); applyAll(); });
+        tiles.appendChild(b);
+      });
+      var chips = $("moodChips");
+      MOOD_ORDER.forEach(function (k, n) {
+        var seed = 7 + n * 101, rnd = function () { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }, sw = "";
+        for (var j = 0; j < 4; j++) {
+          var c = k === "sky" ? skyAt([1, 6.4, 12, 18.6][j], 1) : k === "random" ? lch(rr(0.55, 0.8, rnd), 0.17, j * 90 + 20) : moodColor(k, j, rnd);
+          sw += '<i style="background:' + css(c) + '"></i>';
+        }
+        var b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.dataset.mood = k;
+        b.innerHTML = '<span class="sw">' + sw + "</span>" + MOODS[k].name;
+        b.addEventListener("click", function () { setMood(k); });
+        chips.appendChild(b);
+      });
+      var hours = "";
+      for (var h = 0; h < 24; h++) hours += '<option value="' + h + '">' + (h % 12 || 12) + (h < 12 ? " AM" : " PM") + "</option>";
+      $("nFrom").innerHTML = hours; $("nTo").innerHTML = hours;
+    })();
+    function syncSheet() {
+      document.querySelectorAll(".tile").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.face === S.face)); });
+      document.querySelectorAll(".chip").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.mood === S.mood)); });
+      document.querySelectorAll(".sheet .seg").forEach(function (seg) {
+        seg.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", String(S[seg.dataset.k] === b.dataset.v)); });
+      });
+      document.querySelectorAll(".tg").forEach(function (t) { t.querySelector(".sw-t").setAttribute("aria-checked", String(!!S[t.dataset.t])); });
+      $("pace").value = S.pace;
+      var sec = fadeMs() / 1000;
+      $("paceLbl").textContent = S.mood === "sky" ? "Sky follows the clock" : "about " + (sec < 10 ? sec.toFixed(1) : Math.round(sec)) + "s per fade";
+      $("nRow").hidden = S.night !== "auto";
+      $("inkHint").textContent = S.mood === "sky" ? "Sky always uses Contrast so the time stays easy to read." : "Inverse draws the time in the exact opposite of the color behind it, like the original Transition.";
+      $("nFrom").value = S.nFrom; $("nTo").value = S.nTo;
+    }
+    document.querySelectorAll(".sheet .seg").forEach(function (seg) {
+      seg.addEventListener("click", function (e) {
+        var b = e.target.closest("button"); if (!b) return;
+        S[seg.dataset.k] = b.dataset.v; save(); applyAll();
+      });
+    });
+    document.querySelectorAll(".tg").forEach(function (t) {
+      t.addEventListener("click", function () { S[t.dataset.t] = !S[t.dataset.t]; save(); if (t.dataset.t === "secs") buildFlip(); applyAll(); });
+    });
+    $("pace").addEventListener("input", function () { S.pace = +this.value; save(); syncSheet(); });
+    $("pace").addEventListener("change", function () { var now = performance.now(); slots.forEach(function (s, i) { retarget(i, now); }); });
+    $("nFrom").addEventListener("change", function () { S.nFrom = +this.value; save(); checkNight(); });
+    $("nTo").addEventListener("change", function () { S.nTo = +this.value; save(); checkNight(); });
+
+    function openSheet() {
+      if (sheetOpen || DREAM) return;
+      sheetOpen = true; syncSheet(); wrap.hidden = false; sleep();
+      history.pushState({ driftSheet: 1 }, "", location.href);
+      $("sheet").focus({ preventScroll: true });
+    }
+    function hideSheet() { sheetOpen = false; wrap.hidden = true; dr.focus({ preventScroll: true }); }
+    function closeSheet() { if (!sheetOpen) return; if (history.state && history.state.driftSheet) history.back(); else hideSheet(); }
+    window.addEventListener("popstate", function () { if (sheetOpen) hideSheet(); });
+    $("shClose").addEventListener("click", closeSheet);
+    wrap.addEventListener("pointerup", function (e) { if (e.target === wrap) closeSheet(); });
+
+    // screen saver (Android only)
+    var Drift = CAP && window.Capacitor.registerPlugin ? window.Capacitor.registerPlugin("Drift") : null;
+    if (Drift && !DREAM) {
+      $("ssSec").hidden = false;
+      $("ssBtn").addEventListener("click", function () {
+        Drift.openScreensaverSettings().catch(function () { $("ssBtn").textContent = "Settings → Display → Screen saver"; });
+      });
+    }
+
+    /* ---------------- input ---------------- */
+    var awakeT = 0;
+    function wake() { if (DREAM) return; dr.classList.add("awake"); clearTimeout(awakeT); awakeT = setTimeout(sleep, 3600); }
+    function sleep() { dr.classList.remove("awake"); clearTimeout(awakeT); }
+    var down = null;
+    if (!DREAM) {
+      dr.addEventListener("pointerdown", function (e) { down = { x: e.clientX, y: e.clientY, t: Date.now() }; });
+      dr.addEventListener("pointerup", function (e) {
+        if (!down || e.target.closest(".dock, .sheet-wrap")) { down = null; return; }
+        var dx = e.clientX - down.x, dy = e.clientY - down.y; down = null;
+        if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.3) { setFace(dx < 0 ? 1 : -1); return; }
+        if (Math.abs(dy) > 50 && Math.abs(dy) > Math.abs(dx) * 1.3) { if (dy < 0) openSheet(); return; }
+        jump(); wake();
+      });
+      dr.addEventListener("pointermove", function (e) { if (e.pointerType === "mouse" && !sheetOpen) wake(); });
+      dr.addEventListener("pointerleave", function (e) { if (e.pointerType === "mouse") sleep(); });
+      $("dock").addEventListener("pointerup", function () { wake(); });
+      $("prevFace").addEventListener("click", function () { setFace(-1); });
+      $("nextFace").addEventListener("click", function () { setFace(1); });
+      $("moodBtn").addEventListener("click", function () { setMood(MOOD_ORDER[(MOOD_ORDER.indexOf(S.mood) + 1) % MOOD_ORDER.length]); });
+      $("setBtn").addEventListener("click", openSheet);
+      document.addEventListener("keydown", function (e) {
+        if (e.target.closest && e.target.closest("input, select, textarea")) return;
+        var inApp = STANDALONE || document.fullscreenElement === dr || document.activeElement === dr || dr.contains(document.activeElement);
+        if (!inApp) return;
+        if (e.key === "Escape" && sheetOpen) { closeSheet(); return; }
+        if (sheetOpen) return;
+        if (e.key === " " || e.key === "Enter") { if (e.target.tagName === "BUTTON") return; e.preventDefault(); jump(); }
+        else if (e.key === "ArrowRight") { e.preventDefault(); setFace(1); }
+        else if (e.key === "ArrowLeft") { e.preventDefault(); setFace(-1); }
+        else if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); var n = MOOD_ORDER.length; setMood(MOOD_ORDER[(MOOD_ORDER.indexOf(S.mood) + (e.key === "ArrowUp" ? 1 : n - 1)) % n]); pop(MOODS[S.mood].name); }
+        else if (e.key === "f" || e.key === "F") toggleFs();
+        else if (e.key === "s" || e.key === "S") openSheet();
+      });
+    }
+
+    /* ---------------- fullscreen + screen awake ---------------- */
+    var lock = null;
+    function keepAwake() { if (navigator.wakeLock && !CAP && document.visibilityState === "visible") navigator.wakeLock.request("screen").then(function (l) { lock = l; }).catch(function () {}); }
+    function toggleFs() { if (!dr.requestFullscreen) return; if (document.fullscreenElement) document.exitFullscreen(); else dr.requestFullscreen().catch(function () {}); }
+    var fsBtn = $("fs");
+    if (!dr.requestFullscreen) { fsBtn.hidden = true; $("fsDock").hidden = true; }
+    fsBtn.addEventListener("click", toggleFs);
+    $("fsDock").addEventListener("click", toggleFs);
+    document.addEventListener("fullscreenchange", function () {
+      var on = document.fullscreenElement === dr;
+      fsBtn.textContent = on ? "Exit fullscreen" : "Fullscreen";
+      if (on) { keepAwake(); dr.focus({ preventScroll: true }); } else if (lock && !STANDALONE) { lock.release(); lock = null; }
+      setTimeout(sizeCanvas, 60);
+    });
+    if (STANDALONE) keepAwake();
+    try { if (CAP && window.Capacitor.Plugins && window.Capacitor.Plugins.SystemBars) window.Capacitor.Plugins.SystemBars.hide(); } catch (e) {}
+
+    /* ---------------- grain + start ---------------- */
+    (function grain() {
+      var g = document.createElement("canvas"); g.width = g.height = 128;
+      var x = g.getContext("2d"), im = x.createImageData(128, 128);
+      for (var i = 0; i < im.data.length; i += 4) { var v = R() * 255 | 0; im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = 255; }
+      x.putImageData(im, 0, 0);
+      try { $("grain").style.backgroundImage = "url(" + g.toDataURL() + ")"; } catch (e) {}
+    })();
+    window.addEventListener("resize", sizeCanvas);
+    if (window.ResizeObserver) new ResizeObserver(sizeCanvas).observe(dr);
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "visible") { checkNight(); render(true); if (STANDALONE) keepAwake(); }
+    });
+    sizeCanvas(); applyAll(); tick(); nudge();
+    setInterval(function () { nudge(); checkNight(); }, 60000);
+    nVal = nTarget;
+    requestAnimationFrame(loop);
+    // a little hello: show the controls for a moment so people know they exist
+    if (!DREAM) setTimeout(wake, 700);
+    window.__drift = { S: S, jump: jump, setFace: setFace, setMood: setMood, openSheet: openSheet, closeSheet: closeSheet, render: render, slots: slots, checkNight: checkNight, apply: applyAll };
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>drew2apps — little apps, lots of color</title>
+  <meta name="description" content="Small, colorful web apps and experiments by Drew Carlson. Mix colors, watch a clock change hue, and test your eye for color.">
+  <meta property="og:title" content="drew2apps">
+  <meta property="og:description" content="Little apps, lots of color. Toys and experiments by Drew Carlson.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://drew2apps.com/">
+  <meta name="theme-color" content="#fbf8f3" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#121016" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/assets/fonts/bricolage.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/css/site.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="logo" href="/" aria-label="drew2apps home">drew<span class="two">2</span>apps</a>
+      <nav class="nav" aria-label="Main">
+        <a href="/#apps">Apps</a>
+        <a href="/blog/">Thoughts</a>
+        <a href="/about/">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <div>
+          <div class="eyebrow"><span class="dots"><i style="background:var(--red)"></i><i style="background:var(--green)"></i><i style="background:var(--blue)"></i></span> Est. 2016 · San Diego</div>
+          <h1>Little apps,<br>lots of <span class="r">c</span><span class="g">o</span><span class="b">l</span><span class="r">o</span><span class="g">r</span>.</h1>
+          <p class="lede">drew2apps is where Drew Carlson keeps small toys and experiments. Mix a color, watch a clock change hue, or see how sharp your eye really is.</p>
+          <div class="cta">
+            <a class="btn btn-primary" href="#apps">Play something <span aria-hidden="true">→</span></a>
+            <a class="btn btn-ghost" href="/about/">Who's Drew?</a>
+          </div>
+        </div>
+        <div class="stage" aria-hidden="true">
+          <span class="c r"></span><span class="c g"></span><span class="c b"></span>
+          <span class="label">rgb(255, 255, 255)</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="apps">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>The apps</h2>
+          <p>All free, all in your browser. No sign-up.</p>
+        </div>
+
+        <div class="apps">
+          <a class="app-card feature" href="/apps/trace-race/">
+            <div class="art art-trace" aria-hidden="true">
+              <svg viewBox="0 0 100 100"><path class="base" d="M50 8L61 38H93L67 57L77 89L50 70L23 89L33 57L7 38H39Z"/><path class="glow" pathLength="100" d="M50 8L61 38H93L67 57L77 89L50 70L23 89L33 57L7 38H39Z"/></svg>
+            </div>
+            <div class="body">
+              <span class="badge-new">New · Daily game</span>
+              <h3><img class="ico" src="/assets/img/trace-race-icon.png" alt="" width="40" height="40">Trace Race</h3>
+              <p class="tag">One shape a day, the same for everyone. Trace it in one stroke, as fast and as accurately as you can. Monday is easy. Sunday is brutal.</p>
+              <span class="play">Play today's shape <span class="arrow" aria-hidden="true">→</span></span>
+            </div>
+          </a>
+
+          <a class="app-card" href="/apps/rgb/">
+            <div class="art art-rgb" aria-hidden="true">
+              <div>
+                <div class="swatch-word"><span>R</span><span>G</span><span>B</span></div>
+                <div class="sliders">
+                  <div class="sl" style="--c:#ff4040;--w:78%"></div>
+                  <div class="sl" style="--c:#34d058;--w:42%"></div>
+                  <div class="sl" style="--c:#4d8bff;--w:63%"></div>
+                </div>
+              </div>
+            </div>
+            <div class="body">
+              <h3><img class="ico" src="/assets/img/rgb-icon.png" alt="" width="40" height="40">RGB</h3>
+              <p class="tag">The solution to all your problems. Mix colors with RGB, HSV, HSL, CMYK, HEX or the color box. 100,000+ downloads on Android.</p>
+              <span class="play">Play <span class="arrow" aria-hidden="true">→</span></span>
+            </div>
+          </a>
+
+          <a class="app-card" href="/apps/drift/">
+            <div class="art art-transition" aria-hidden="true">
+              <div class="clock" data-mini-clock>12:00</div>
+            </div>
+            <div class="body">
+              <h3><img class="ico" src="/assets/img/drift-icon.png" alt="" width="40" height="40">Drift</h3>
+              <p class="tag">An ambient color clock that never sits still. Six clock faces, color moods and a night mode. Formerly Transition.</p>
+              <span class="play">Watch <span class="arrow" aria-hidden="true">→</span></span>
+            </div>
+          </a>
+
+          <a class="app-card" href="/apps/colorize/">
+            <div class="art art-colorize" aria-hidden="true">
+              <div class="grid" data-mini-colorize>
+                <i></i><i></i><i></i><i></i>
+                <i></i><i></i><i></i><i></i>
+                <i></i><i></i><i></i><i></i>
+                <i></i><i></i><i></i><i></i>
+              </div>
+            </div>
+            <div class="body">
+              <h3><img class="ico drop" src="/assets/img/colorize-icon.png" alt="" width="40" height="40">Colorize</h3>
+              <p class="tag">One square doesn't match. Find it fast while the grid grows from 2×2 to 8×8. Classic, Daily and Zen modes.</p>
+              <span class="play">Play <span class="arrow" aria-hidden="true">→</span></span>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" style="padding-top:0">
+      <div class="wrap">
+        <div class="now-strip">
+          <div class="badge" aria-hidden="true">✦</div>
+          <div>
+            <h3>More on the way</h3>
+            <p>Old Android apps are coming back to life here, plus new experiments. Got an idea for a little app?</p>
+          </div>
+          <a class="btn btn-ghost" href="mailto:drew@drew2apps.com">Say hi <span aria-hidden="true">→</span></a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <span>© <span data-year>2026</span> Drew Carlson · Made in San Diego</span>
+      <span><a href="/about/">About</a> · <a href="/privacy/">Privacy</a> · <a href="mailto:drew@drew2apps.com">drew@drew2apps.com</a></span>
+    </div>
+  </footer>
+  <div class="rgb-bar" aria-hidden="true"><i style="background:var(--red)"></i><i style="background:var(--green)"></i><i style="background:var(--blue)"></i></div>
+
+  <script src="/assets/js/site.js" defer></script>
+</body>
+</html>

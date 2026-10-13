@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>RGB · drew2apps</title>
+  <meta name="description" content="Create any color with RGB, HSV, HSL, CMYK, HEX or the color box. Tints, shades, contrast checks and 866 named colors. The web version of the RGB Android app.">
+  <meta name="theme-color" content="#fbf8f3" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#121016" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/assets/fonts/bricolage.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/css/site.css">
+  <script>
+    // Standalone mode: ?standalone, an installed web app, or the Android wrapper (Capacitor).
+    (function () {
+      var on = /[?&]standalone\b/.test(location.search) || window.Capacitor || (window.matchMedia && matchMedia("(display-mode: standalone)").matches);
+      if (on) document.documentElement.classList.add("standalone");
+    })();
+  </script>
+  <style>
+    /* Dark panel + teal accent from the original Android app, with the big
+       live readout and gradient sliders from the web redesign. */
+    .rgbx {
+      --panel: #1c1e21; --panel-2: #26292d; --line: rgba(255, 255, 255, 0.08);
+      --teal: #008080; --teal-hi: #00a3a3; --sub: rgba(255, 255, 255, 0.66);
+      background: var(--panel); color: #fff;
+      display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); min-height: 600px;
+    }
+    .rgbx-left { display: flex; flex-direction: column; min-width: 0; }
+
+    /* swatch with the big readout */
+    .sw {
+      position: relative; flex: 1; min-height: 260px; background: var(--c); color: var(--on);
+      display: flex; flex-direction: column; justify-content: flex-end; padding: 22px 24px; cursor: zoom-in;
+      transition: background-color 60ms linear, color 0.2s;
+    }
+    .sw-hex { font: 800 clamp(44px, 6vw, 72px)/0.95 var(--font-display); letter-spacing: -0.02em; }
+    .sw-sub { margin-top: 8px; font: 600 14px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; opacity: 0.8; }
+    .sw-name { margin-top: 4px; font: 700 15px/1.3 var(--font-body); opacity: 0.92; }
+    .sw-fill {
+      position: absolute; right: 14px; top: 14px; font: 600 12px/1 var(--font-body);
+      padding: 7px 11px; border-radius: 999px; background: rgba(0, 0, 0, 0.22); color: #fff; opacity: 0; transition: opacity 0.2s;
+    }
+    .sw:hover .sw-fill, .sw:focus-visible .sw-fill { opacity: 1; }
+    .sw:focus-visible { outline: 3px solid var(--teal-hi); outline-offset: -3px; }
+
+    /* tints and shades */
+    .ramp { display: grid; grid-template-columns: repeat(11, 1fr); height: 34px; }
+    .ramp button { border: 0; padding: 0; cursor: pointer; position: relative; }
+    .ramp button[aria-current="true"]::after { content: ""; position: absolute; inset: 9px; border-radius: 50%; border: 2px solid var(--on-ramp, #fff); }
+    .ramp button:hover { transform: scaleY(1.18); z-index: 1; }
+
+    /* original-style info block */
+    .info { padding: 14px 18px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px 16px; font: 700 13px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .info button { all: unset; cursor: copy; border-radius: 6px; padding: 2px 5px; margin: -2px -5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .info button:hover { background: rgba(255, 255, 255, 0.08); }
+    .info button:focus-visible { outline: 2px solid var(--teal-hi); }
+    .contrast { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; font-family: var(--font-body); }
+    .contrast span { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 8px; font-size: 12px; font-weight: 700; background: var(--panel-2); }
+    .contrast i { font-style: normal; width: 22px; height: 18px; display: grid; place-items: center; border-radius: 4px; font-size: 11px; font-weight: 800; }
+    .contrast .pass { color: #4cd964; } .contrast .fail { color: #ff6b5e; }
+
+    .rgbx-right { display: flex; flex-direction: column; gap: 16px; padding: 22px; border-left: 1px solid var(--line); min-width: 0; }
+    .controls { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 20px; min-height: 270px; }
+
+    /* gradient sliders: the track previews the color you'd get */
+    .sl { display: grid; grid-template-columns: 22px 1fr 60px; gap: 12px; align-items: center; }
+    .sl label { font: 800 14px/1 var(--font-body); color: var(--sub); }
+    .sl input[type="number"] {
+      width: 60px; padding: 8px 6px; border-radius: 9px; border: 1px solid #3a3d42; background: var(--panel-2); color: #fff;
+      text-align: center; font: 600 14px/1 ui-monospace, Menlo, monospace;
+    }
+    .sl input[type="number"]:focus { outline: 2px solid var(--teal-hi); border-color: transparent; }
+    .rgbx input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 26px; background: transparent; cursor: pointer; }
+    .rgbx input[type="range"]::-webkit-slider-runnable-track { height: 12px; border-radius: 6px; background: var(--trk); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
+    .rgbx input[type="range"]::-moz-range-track { height: 12px; border-radius: 6px; background: var(--trk); }
+    .rgbx input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 24px; height: 24px; margin-top: -6px; border-radius: 50%;
+      background: var(--thumb, #fff); border: 4px solid #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+    }
+    .rgbx input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--thumb, #fff); border: 4px solid #fff; }
+    .rgbx input[type="range"]:focus-visible { outline: 2px solid var(--teal-hi); outline-offset: 4px; border-radius: 8px; }
+
+    /* the color box (the app's "vectorscope") */
+    .box-wrap { display: grid; grid-template-columns: 1fr 30px; grid-template-rows: minmax(0, 1fr); gap: 16px; height: 100%; min-height: 270px; }
+    .box { position: relative; min-height: 0; touch-action: none; cursor: crosshair; border-radius: 6px; overflow: hidden; }
+    /* absolutely positioned so the canvas's pixel size can never feed back into the layout */
+    .box canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    .box .cur { position: absolute; width: 20px; height: 20px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.4); transform: translate(-50%, -50%); pointer-events: none; }
+    .hue { display: flex; justify-content: center; }
+    .hue input[type="range"] { writing-mode: vertical-lr; direction: rtl; width: 26px; height: 100%; --trk: linear-gradient(to top, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00); }
+    .hue input[type="range"]::-webkit-slider-runnable-track { width: 12px; height: 100%; }
+    .hue input[type="range"]::-webkit-slider-thumb { margin-top: 0; margin-left: -6px; }
+
+    /* hex */
+    .hex-row { display: flex; gap: 12px; align-items: center; }
+    .hex-row .hash { font: 800 30px/1 var(--font-display); color: var(--sub); }
+    .hex-row input { flex: 1; min-width: 0; padding: 14px 16px; border-radius: 12px; border: 1px solid #3a3d42; background: var(--panel-2); color: #fff; font: 700 26px/1 ui-monospace, Menlo, monospace; letter-spacing: 0.08em; text-transform: uppercase; }
+    .hex-row input:focus { outline: 2px solid var(--teal-hi); border-color: transparent; }
+    .hex-go { width: 56px; height: 56px; border-radius: 50%; border: 0; cursor: pointer; color: #fff; background: var(--teal); font: 800 15px/1 var(--font-body); transition: background 0.15s, transform 0.1s; }
+    .hex-go:active { transform: scale(0.95); }
+    .hex-go.ok { background: #2a9e46; } .hex-go.bad { background: #cc4a45; }
+    .hex-help { color: var(--sub); font-size: 14px; margin-top: 12px; }
+
+    .acts { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .acts > button { border: 1px solid #3a3d42; background: var(--panel-2); color: #fff; border-radius: 999px; padding: 9px 14px; font: 600 13px/1 var(--font-body); cursor: pointer; }
+    .acts > button:hover { border-color: var(--teal-hi); }
+    .favs { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+    .favs button { width: 24px; height: 24px; border-radius: 6px; border: 2px solid rgba(255, 255, 255, 0.22); cursor: pointer; padding: 0; }
+
+    /* the original mode bar, same order as the app */
+    .modes { display: flex; border: 1.5px solid var(--teal); border-radius: 6px; overflow: hidden; }
+    .modes button { flex: 1; border: 0; background: transparent; color: #fff; cursor: pointer; padding: 12px 0; font: 600 14px/1 var(--font-body); }
+    .modes button[aria-pressed="true"] { background: var(--teal); }
+    .modes button:hover:not([aria-pressed="true"]) { background: rgba(0, 128, 128, 0.25); }
+    .modes svg { width: 16px; height: 16px; display: block; margin: 0 auto; }
+
+    .modes .menu-btn { flex: 0 0 52px; border-left: 1.5px solid var(--teal); }
+    .modes .menu-btn svg { width: 20px; height: 20px; }
+
+    /* menu sheet: slides up on phones, centered card on wide screens */
+    .sheet { position: fixed; inset: 0; z-index: 90; display: flex; align-items: flex-end; justify-content: center; background: rgba(0, 0, 0, 0.55); }
+    .sheet[hidden] { display: none; }
+    .sheet-card {
+      width: min(520px, 100%); max-height: 88dvh; overflow-y: auto; overscroll-behavior: contain;
+      background: var(--panel); color: #fff; border-radius: 20px 20px 0 0; box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.4);
+      padding: 18px 18px calc(22px + var(--sab, 0px)); animation: sheet-up 0.22s ease-out;
+    }
+    @keyframes sheet-up { from { transform: translateY(24px); opacity: 0; } }
+    @media (min-width: 861px) { .sheet { align-items: center; } .sheet-card { border-radius: 20px; } }
+    .sheet-top { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+    .sheet-top img { border-radius: 10px; }
+    .sheet-top h2 { font: 800 22px/1.1 var(--font-display); }
+    .sheet-top p { color: var(--sub); font-size: 13px; margin-top: 2px; }
+    .sheet-x { margin-left: auto; width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--panel-2); color: #fff; cursor: pointer; display: grid; place-items: center; }
+    .sheet-x svg { width: 20px; height: 20px; }
+    .sheet section { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 14px; }
+    .sheet h3 { font: 700 12px/1 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--sub); margin-bottom: 12px; }
+    .sheet h3 span { letter-spacing: 0; text-transform: none; font-weight: 600; }
+    .sheet-note { color: var(--sub); font-size: 14px; line-height: 1.5; }
+    .sheet-note b { color: #fff; }
+    .saved { display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: 12px 10px; }
+    .saved:empty { display: none; }
+    .saved .tile { position: relative; }
+    .saved .pick { all: unset; display: block; width: 100%; cursor: pointer; text-align: center; font: 600 11px/1 ui-monospace, Menlo, monospace; color: var(--sub); }
+    .saved .pick i { display: block; aspect-ratio: 1; border-radius: 12px; margin-bottom: 6px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); }
+    .saved .pick:focus-visible i { outline: 2px solid var(--teal-hi); outline-offset: 2px; }
+    .saved .rm { position: absolute; top: -6px; right: -6px; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--panel); background: #3a3d42; color: #fff; font: 700 13px/1 var(--font-body); cursor: pointer; display: grid; place-items: center; padding: 0; }
+    .sheet-links { display: flex; flex-wrap: wrap; gap: 8px; }
+    .sheet-links a { flex: 1 1 auto; text-align: center; white-space: nowrap; color: #fff; text-decoration: none; border: 1px solid #3a3d42; background: var(--panel-2); border-radius: 999px; padding: 10px 10px; font: 600 13px/1 var(--font-body); }
+    .sheet-links a:hover { border-color: var(--teal-hi); }
+
+    .toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px); opacity: 0; background: #1c1e21; color: #fff; padding: 10px 16px; border-radius: 999px; font: 600 14px/1 var(--font-body); transition: all 0.2s; pointer-events: none; z-index: 50; box-shadow: var(--shadow-lg); }
+    .toast.show { opacity: 1; transform: translateX(-50%); }
+    .fill { position: fixed; inset: 0; z-index: 100; cursor: zoom-out; display: grid; place-items: end start; padding: 32px; font: 800 48px/1 var(--font-display); }
+
+    @media (max-width: 860px) {
+      .rgbx { grid-template-columns: 1fr; }
+      .rgbx-right { border-left: 0; border-top: 1px solid var(--line); padding: 18px 16px; }
+      .sw { min-height: 200px; }
+      .info { grid-template-columns: 1fr; font-size: 12.5px; }
+      .controls { min-height: 0; flex: none; }
+      .box-wrap { height: 300px; min-height: 0; }
+      .favs { display: none; }
+    }
+    .standalone { --app-bg: #1c1e21; }
+    .standalone .rgbx { min-height: calc(100dvh - var(--sat) - var(--sab)); }
+    /* phone app: one screen, no scrolling; the color box takes whatever height is left */
+    @media (max-width: 860px) {
+      .standalone .rgbx { height: calc(100dvh - var(--sat) - var(--sab)); min-height: 560px; grid-template-rows: auto minmax(0, 1fr); }
+      .standalone .sw { min-height: 160px; padding: 18px 20px; }
+      .standalone .info { padding: 12px 16px 14px; }
+      .standalone .rgbx-right { padding: 14px 16px 12px; gap: 12px; overflow-y: auto; }
+      .standalone .controls { flex: 1; min-height: 0; }
+      .standalone .box-wrap { flex: 1 1 0; height: auto; min-height: 180px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="logo" href="/" aria-label="drew2apps home">drew<span class="two">2</span>apps</a>
+      <nav class="nav" aria-label="Main">
+        <a href="/#apps" aria-current="page">Apps</a>
+        <a href="/blog/">Thoughts</a>
+        <a href="/about/">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="app-page">
+    <div class="wrap">
+      <a class="back" href="/#apps">← All apps</a>
+      <div class="app-top">
+        <div>
+          <h1>RGB</h1>
+          <p class="tag">The solution to all your problems. Create colors with the color box, RGB, HSV, HSL, CMYK or HEX.</p>
+        </div>
+      </div>
+
+      <div class="app-frame">
+        <div class="rgbx" id="app">
+          <div class="rgbx-left">
+            <div class="sw" id="sw" tabindex="0" role="button" aria-label="Fill the screen with this color">
+              <span class="sw-fill">Fill screen ⤢</span>
+              <div class="sw-hex" id="bigHex">#3BA0A1</div>
+              <div class="sw-sub" id="bigRgb"></div>
+              <div class="sw-name" id="bigName"></div>
+            </div>
+            <div class="ramp" id="ramp" aria-label="Tints and shades"></div>
+            <div class="info" aria-live="polite">
+              <button type="button" id="i-rgb" title="Copy"></button>
+              <button type="button" id="i-hex" title="Copy"></button>
+              <button type="button" id="i-hsv" title="Copy"></button>
+              <button type="button" id="i-hsl" title="Copy"></button>
+              <button type="button" id="i-cmyk" title="Copy"></button>
+              <button type="button" id="i-css" title="Copy CSS"></button>
+              <div class="contrast" id="contrast"></div>
+            </div>
+          </div>
+
+          <div class="rgbx-right">
+            <div class="controls" id="controls"></div>
+            <div class="acts">
+              <button type="button" id="random">Surprise me</button>
+              <button type="button" id="save">♥ Save</button>
+              <button type="button" id="share">Copy link</button>
+              <div class="favs" id="favs" aria-label="Saved colors"></div>
+            </div>
+            <div class="modes" role="group" aria-label="Color mode">
+              <button type="button" data-mode="box" aria-label="Color box" title="Color box"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5c-.3 0-.6.2-.8.4C9.6 5 5 11 5 14.8 5 18.8 8.1 22 12 22s7-3.2 7-7.2C19 11 14.4 5 12.8 2.9c-.2-.2-.5-.4-.8-.4z"/></svg></button>
+              <button type="button" data-mode="rgb">RGB</button>
+              <button type="button" data-mode="hsv">HSV</button>
+              <button type="button" data-mode="hsl">HSL</button>
+              <button type="button" data-mode="cmyk">CMYK</button>
+              <button type="button" data-mode="hex">HEX</button>
+              <button type="button" class="menu-btn" id="menuBtn" aria-label="Menu" title="Menu" aria-haspopup="dialog" aria-controls="menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+            </div>
+          </div>
+          <div class="sheet" id="menu" role="dialog" aria-modal="true" aria-labelledby="menuTitle" hidden>
+            <div class="sheet-card">
+              <div class="sheet-top">
+                <img src="/assets/img/rgb-icon.png" alt="" width="44" height="44">
+                <div><h2 id="menuTitle">RGB</h2><p>Version 2.0.0</p></div>
+                <button type="button" class="sheet-x" id="menuClose" aria-label="Close menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+              </div>
+
+              <section>
+                <h3>Saved colors <span id="savedCount"></span></h3>
+                <div class="saved" id="saved"></div>
+                <p class="sheet-note" id="savedEmpty">Tap <b>♥ Save</b> to keep a color here.</p>
+              </section>
+
+              <section class="sheet-links">
+                <a href="https://drew2apps.com/">drew2apps.com</a>
+                <a href="https://drew2apps.com/privacy/">Privacy policy</a>
+                <a href="mailto:drew@drew2apps.com?subject=RGB%20app">Send feedback</a>
+              </section>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="app-notes"><strong>Originally an Android app</strong> (2015–2020) with over 100,000 downloads. Click any value to copy it, click a tint or shade to jump to it, and share the link to send someone an exact color.</p>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <span>© <span data-year>2026</span> Drew Carlson · Made in San Diego</span>
+      <span><a href="/about/">About</a> · <a href="/privacy/">Privacy</a> · <a href="mailto:drew@drew2apps.com">drew@drew2apps.com</a></span>
+    </div>
+  </footer>
+  <div class="rgb-bar" aria-hidden="true"><i style="background:var(--red)"></i><i style="background:var(--green)"></i><i style="background:var(--blue)"></i></div>
+  <div class="toast" id="toast" role="status"></div>
+
+  <script src="/assets/js/site.js" defer></script>
+  <script>
+  (function () {
+    "use strict";
+    // ---------- color math ----------
+    var clamp = function (v, a, b) { return Math.min(b, Math.max(a, v)); };
+    function hueOf(r, g, b) {
+      var max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min, h = 0;
+      if (d) { if (max === r) h = ((g - b) / d) % 6; else if (max === g) h = (b - r) / d + 2; else h = (r - g) / d + 4; h *= 60; if (h < 0) h += 360; }
+      return h;
+    }
+    function rgbToHsv(r, g, b) { var max = Math.max(r, g, b) / 255, min = Math.min(r, g, b) / 255; return [hueOf(r, g, b), max ? (max - min) / max : 0, max]; }
+    function rgbToHsl(r, g, b) { var max = Math.max(r, g, b) / 255, min = Math.min(r, g, b) / 255, l = (max + min) / 2, d = max - min; return [hueOf(r, g, b), d ? d / (1 - Math.abs(2 * l - 1)) : 0, l]; }
+    function fromHC(h, c, x, m) {
+      h = ((h % 360) + 360) % 360; var p;
+      if (h < 60) p = [c, x, 0]; else if (h < 120) p = [x, c, 0]; else if (h < 180) p = [0, c, x]; else if (h < 240) p = [0, x, c]; else if (h < 300) p = [x, 0, c]; else p = [c, 0, x];
+      return p.map(function (n) { return Math.round((n + m) * 255); });
+    }
+    function hsvToRgb(h, s, v) { var c = v * s; return fromHC(h, c, c * (1 - Math.abs(((h / 60) % 2) - 1)), v - c); }
+    function hslToRgb(h, s, l) { var c = (1 - Math.abs(2 * l - 1)) * s; return fromHC(h, c, c * (1 - Math.abs(((h / 60) % 2) - 1)), l - c / 2); }
+    function rgbToCmyk(r, g, b) { var k = 1 - Math.max(r, g, b) / 255; if (k >= 1) return [0, 0, 0, 1]; return [(1 - r / 255 - k) / (1 - k), (1 - g / 255 - k) / (1 - k), (1 - b / 255 - k) / (1 - k), k]; }
+    function cmykToRgb(c, m, y, k) { return [255 * (1 - c) * (1 - k), 255 * (1 - m) * (1 - k), 255 * (1 - y) * (1 - k)].map(Math.round); }
+    function lum(rgb) { return rgb.map(function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }).reduce(function (a, v, i) { return a + v * [0.2126, 0.7152, 0.0722][i]; }, 0); }
+    function ratio(a, b) { var x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }
+    var hex2 = function (n) { return n.toString(16).padStart(2, "0").toUpperCase(); };
+    var toHex = function (rgb) { return "#" + rgb.map(hex2).join(""); };
+    var css = function (rgb) { return "rgb(" + rgb.join(",") + ")"; };
+    var r2 = function (n) { return (Math.round(n * 100) / 100).toFixed(2); };
+    var mix = function (a, b, t) { return a.map(function (v, i) { return Math.round(v + (b[i] - v) * t); }); };
+
+    // ---------- state ----------
+    var S = { rgb: [59, 160, 161], hsv: null, hsl: null, mode: "box" };
+    S.hsv = rgbToHsv.apply(null, S.rgb); S.hsl = rgbToHsl.apply(null, S.rgb);
+    try { var lm = localStorage.getItem("rgb-mode"); if (lm) S.mode = lm; } catch (e) {}
+    var fromHex = function (h) { h = h.replace("#", ""); return [0, 2, 4].map(function (i) { return parseInt(h.substr(i, 2), 16); }); };
+    var hm = location.hash.match(/^#([0-9a-f]{6})$/i);
+    if (hm) setRgb(fromHex(hm[1]));
+
+    // rgb is the source of truth; hsv/hsl keep hue and saturation when greys can't carry them
+    function setRgb(rgb, keep) {
+      S.rgb = rgb.map(function (v) { return clamp(Math.round(v), 0, 255); });
+      if (keep !== "hsv") { var hv = rgbToHsv.apply(null, S.rgb); if (hv[1] === 0 && S.hsv) hv[0] = S.hsv[0]; if (hv[2] === 0 && S.hsv) { hv[0] = S.hsv[0]; hv[1] = S.hsv[1]; } S.hsv = hv; }
+      if (keep !== "hsl") { var hl = rgbToHsl.apply(null, S.rgb); if (hl[1] === 0 && S.hsl) hl[0] = S.hsl[0]; S.hsl = hl; }
+    }
+
+    // ---------- 866 named colors from the original app ----------
+    var NAMES = null;
+    fetch("colors.json").then(function (r) { return r.json(); }).then(function (j) {
+      NAMES = j.map(function (row) { var h = row[1]; return [row[0], parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; });
+      render();
+    }).catch(function () {});
+    function nearestName() {
+      if (!NAMES) return null;
+      var best = null, bd = 1e9, r = S.rgb[0], g = S.rgb[1], b = S.rgb[2];
+      for (var i = 0; i < NAMES.length; i++) { var n = NAMES[i], d = (n[1] - r) * (n[1] - r) * 2 + (n[2] - g) * (n[2] - g) * 4 + (n[3] - b) * (n[3] - b) * 3; if (d < bd) { bd = d; best = n; if (!d) break; } }
+      return { name: best[0], exact: bd === 0 };
+    }
+
+    // ---------- rendering ----------
+    var $ = function (id) { return document.getElementById(id); };
+    var app = $("app"), controls = $("controls");
+
+    function render() {
+      var c = S.rgb, hv = S.hsv, hl = S.hsl, k = rgbToCmyk(c[0], c[1], c[2]), hex = toHex(c);
+      var onDark = ratio(c, [255, 255, 255]) >= ratio(c, [22, 19, 28]);
+      app.style.setProperty("--c", hex);
+      app.style.setProperty("--on", onDark ? "#ffffff" : "#16131c");
+      $("bigHex").textContent = hex;
+      $("bigRgb").textContent = css(c).replace(/,/g, ", ") + "  ·  hsl(" + Math.round(hl[0]) + ", " + Math.round(hl[1] * 100) + "%, " + Math.round(hl[2] * 100) + "%)";
+      $("i-rgb").textContent = "RGB: (" + c.join(", ") + ")";
+      $("i-hex").textContent = "HEX: " + hex;
+      $("i-hsv").textContent = "HSV: (" + r2(hv[0]) + "º, " + Math.round(hv[1] * 100) + "%, " + Math.round(hv[2] * 100) + "%)";
+      $("i-hsl").textContent = "HSL: (" + r2(hl[0]) + "º, " + Math.round(hl[1] * 100) + "%, " + Math.round(hl[2] * 100) + "%)";
+      $("i-cmyk").textContent = "CMYK: (" + k.map(r2).join(",") + ")";
+      $("i-css").textContent = "CSS: " + css(c);
+      var n = nearestName();
+      if (n) $("bigName").textContent = (n.exact ? "" : "≈ ") + n.name;
+
+      // contrast badges (WCAG AA = 4.5, AAA = 7)
+      var w = ratio(c, [255, 255, 255]), b = ratio(c, [0, 0, 0]);
+      var badge = function (label, r, fg) {
+        var cls = r >= 4.5 ? "pass" : "fail", grade = r >= 7 ? "AAA" : r >= 4.5 ? "AA" : "✕";
+        return '<span title="Contrast of ' + label + ' text on this color"><i style="background:' + toHex(c) + ';color:' + fg + '">Aa</i>' + label + " " + r.toFixed(2) + ' <b class="' + cls + '">' + grade + "</b></span>";
+      };
+      $("contrast").innerHTML = badge("White", w, "#fff") + badge("Black", b, "#000");
+
+      // tints and shades: 5 toward black, the color, 5 toward white
+      var ramp = $("ramp"), steps = [];
+      for (var i = 5; i >= 1; i--) steps.push(mix(c, [0, 0, 0], i / 6));
+      steps.push(c.slice());
+      for (var j = 1; j <= 5; j++) steps.push(mix(c, [255, 255, 255], j / 6));
+      if (!ramp.children.length) {
+        steps.forEach(function () {
+          var bt = document.createElement("button"); bt.type = "button";
+          bt.addEventListener("click", function () { setRgb(JSON.parse(bt.dataset.c)); update(); });
+          ramp.appendChild(bt);
+        });
+      }
+      steps.forEach(function (s, idx) {
+        var bt = ramp.children[idx]; bt.style.background = css(s); bt.dataset.c = JSON.stringify(s);
+        bt.setAttribute("aria-label", toHex(s)); bt.title = toHex(s);
+        bt.setAttribute("aria-current", String(idx === 5));
+        bt.style.setProperty("--on-ramp", lum(s) > 0.4 ? "#16131c" : "#fff");
+      });
+
+      clearTimeout(render.t);
+      render.t = setTimeout(function () { history.replaceState(history.state, "", "#" + hex.slice(1).toLowerCase()); }, 200);
+    }
+
+    // ---------- sliders: every track previews the colors along it ----------
+    function grad(preview, max) {
+      var stops = [];
+      for (var i = 0; i <= 6; i++) stops.push(css(preview(max * i / 6)) + " " + (i / 6 * 100).toFixed(1) + "%");
+      return "linear-gradient(90deg," + stops.join(",") + ")";
+    }
+    function defs(mode) {
+      if (mode === "rgb") {
+        var ch = function (i, lab, col) {
+          return { lab: lab, max: 255, thumb: col,
+            get: function () { return S.rgb[i]; },
+            set: function (v) { var c = S.rgb.slice(); c[i] = v; setRgb(c); },
+            prev: function (v) { var c = S.rgb.slice(); c[i] = Math.round(v); return c; } };
+        };
+        return [ch(0, "R", "#ff3b3b"), ch(1, "G", "#22c55e"), ch(2, "B", "#3b82f6")];
+      }
+      if (mode === "hsv" || mode === "hsl") {
+        var key = mode, conv = mode === "hsv" ? hsvToRgb : hslToRgb;
+        var put = function (i, v) { var a = S[key].slice(); a[i] = v; S[key] = a; setRgb(conv(a[0], a[1], a[2]), key); };
+        var prv = function (i, v) { var a = S[key].slice(); a[i] = v; return conv(a[0], a[1], a[2]); };
+        return [
+          { lab: "H", max: 360, get: function () { return Math.round(S[key][0]); }, set: function (v) { put(0, v); }, prev: function (v) { return prv(0, v); } },
+          { lab: "S", max: 100, get: function () { return Math.round(S[key][1] * 100); }, set: function (v) { put(1, v / 100); }, prev: function (v) { return prv(1, v / 100); } },
+          { lab: mode === "hsv" ? "V" : "L", max: 100, get: function () { return Math.round(S[key][2] * 100); }, set: function (v) { put(2, v / 100); }, prev: function (v) { return prv(2, v / 100); } }
+        ];
+      }
+      if (mode === "cmyk") {
+        var cm = function () { return rgbToCmyk(S.rgb[0], S.rgb[1], S.rgb[2]); };
+        return ["C", "M", "Y", "K"].map(function (lab, i) {
+          return { lab: lab, max: 100, thumb: ["#00bcd4", "#e91e63", "#fdd835", "#6b6b6b"][i],
+            get: function () { return Math.round(cm()[i] * 100); },
+            set: function (v) { var k = cm(); k[i] = v / 100; setRgb(cmykToRgb(k[0], k[1], k[2], k[3])); },
+            prev: function (v) { var k = cm(); k[i] = v / 100; return cmykToRgb(k[0], k[1], k[2], k[3]); } };
+        });
+      }
+      return [];
+    }
+
+    var live = [];
+    function buildMode() {
+      controls.innerHTML = ""; live = [];
+      document.querySelectorAll(".modes button[data-mode]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.mode === S.mode)); });
+      try { localStorage.setItem("rgb-mode", S.mode); } catch (e) {}
+      if (S.mode === "box") return buildBox();
+      if (S.mode === "hex") return buildHex();
+      defs(S.mode).forEach(function (d, idx) {
+        var row = document.createElement("div"); row.className = "sl";
+        var id = "s-" + S.mode + idx;
+        row.innerHTML = '<label for="' + id + '">' + d.lab + '</label><input type="range" id="' + id + '" min="0" max="' + d.max + '"><input type="number" min="0" max="' + d.max + '" aria-label="' + d.lab + ' value">';
+        var range = row.children[1], num = row.children[2];
+        range.addEventListener("input", function () { d.set(+range.value); update(range); });
+        num.addEventListener("input", function () { if (num.value === "") return; d.set(clamp(+num.value, 0, d.max)); update(num); });
+        live.push(function (src) {
+          if (src !== range) range.value = d.get();
+          if (src !== num) num.value = d.get();
+          range.style.setProperty("--trk", grad(d.prev, d.max));
+          range.style.setProperty("--thumb", d.thumb ? d.thumb : toHex(S.rgb));
+        });
+        controls.appendChild(row);
+      });
+      update();
+    }
+
+    function buildBox() {
+      var wrap = document.createElement("div"); wrap.className = "box-wrap";
+      wrap.innerHTML = '<div class="box"><canvas></canvas><span class="cur"></span></div><div class="hue"><input type="range" min="0" max="360" aria-label="Hue"></div>';
+      controls.appendChild(wrap);
+      var box = wrap.querySelector(".box"), cv = box.querySelector("canvas"), cur = box.querySelector(".cur"), hue = wrap.querySelector("input"), ctx = cv.getContext("2d");
+      function paint() {
+        var w = cv.width = Math.max(1, box.clientWidth * devicePixelRatio), h = cv.height = Math.max(1, box.clientHeight * devicePixelRatio);
+        // like the app: pure hue at left, white at right, black at the bottom
+        var gx = ctx.createLinearGradient(0, 0, w, 0); gx.addColorStop(0, toHex(hsvToRgb(S.hsv[0], 1, 1))); gx.addColorStop(1, "#fff");
+        ctx.fillStyle = gx; ctx.fillRect(0, 0, w, h);
+        var gy = ctx.createLinearGradient(0, 0, 0, h); gy.addColorStop(0, "rgba(0,0,0,0)"); gy.addColorStop(1, "#000");
+        ctx.fillStyle = gy; ctx.fillRect(0, 0, w, h);
+      }
+      function place() { cur.style.left = ((1 - S.hsv[1]) * 100) + "%"; cur.style.top = ((1 - S.hsv[2]) * 100) + "%"; cur.style.background = toHex(S.rgb); }
+      function pick(e) {
+        var r = box.getBoundingClientRect(), x = clamp((e.clientX - r.left) / r.width, 0, 1), y = clamp((e.clientY - r.top) / r.height, 0, 1);
+        S.hsv = [S.hsv[0], 1 - x, 1 - y]; setRgb(hsvToRgb(S.hsv[0], S.hsv[1], S.hsv[2]), "hsv"); update(box);
+      }
+      box.addEventListener("pointerdown", function (e) { box.setPointerCapture(e.pointerId); pick(e); });
+      box.addEventListener("pointermove", function (e) { if (e.buttons) pick(e); });
+      hue.addEventListener("input", function () { S.hsv = [+hue.value, S.hsv[1], S.hsv[2]]; setRgb(hsvToRgb(S.hsv[0], S.hsv[1], S.hsv[2]), "hsv"); paint(); update(hue); });
+      live.push(function (src) { if (src !== hue) { hue.value = Math.round(S.hsv[0]); if (src !== box) paint(); } place(); });
+      new ResizeObserver(paint).observe(box);
+      update();
+    }
+
+    function buildHex() {
+      var wrap = document.createElement("div");
+      wrap.innerHTML = '<div class="hex-row"><span class="hash">#</span><input maxlength="6" autocomplete="off" spellcheck="false" aria-label="Hex code"><button class="hex-go" type="button" aria-label="Apply hex code">Go</button></div><p class="hex-help">Type a 3 or 6 character hex code. Green means good to go, red means it won\'t work.</p>';
+      controls.appendChild(wrap);
+      var inp = wrap.querySelector("input"), go = wrap.querySelector("button");
+      inp.id = "hexIn";
+      function state() {
+        var v = inp.value.toUpperCase(); go.classList.remove("ok", "bad");
+        if (v && !/^[0-9A-F]+$/.test(v)) go.classList.add("bad"); else if (/^([0-9A-F]{3}|[0-9A-F]{6})$/.test(v)) go.classList.add("ok");
+      }
+      function apply() {
+        var v = inp.value.toUpperCase();
+        if (!/^([0-9A-F]{3}|[0-9A-F]{6})$/.test(v)) { inp.value = ""; state(); return; }
+        if (v.length === 3) v = v.replace(/(.)/g, "$1$1");
+        setRgb([0, 2, 4].map(function (i) { return parseInt(v.substr(i, 2), 16); })); update(inp);
+      }
+      inp.addEventListener("input", function () { state(); if (/^[0-9A-Fa-f]{6}$/.test(inp.value)) apply(); });
+      inp.addEventListener("keydown", function (e) { if (e.key === "Enter") apply(); });
+      go.addEventListener("click", apply);
+      live.push(function (src) { if (src !== inp) { inp.value = toHex(S.rgb).slice(1); state(); } });
+      update();
+    }
+
+    function update(src) { live.forEach(function (f) { f(src); }); render(); }
+    document.querySelectorAll(".modes button[data-mode]").forEach(function (b) { b.addEventListener("click", function () { S.mode = b.dataset.mode; buildMode(); }); });
+
+    // ---------- extras ----------
+    var toast = $("toast");
+    function say(t) { toast.textContent = t; toast.classList.add("show"); clearTimeout(say.t); say.t = setTimeout(function () { toast.classList.remove("show"); }, 1300); }
+    function copy(t) { if (navigator.clipboard) navigator.clipboard.writeText(t).then(function () { say("Copied " + t); }, function () {}); }
+    document.querySelectorAll(".info > button").forEach(function (b) { b.addEventListener("click", function () { copy(b.textContent.replace(/^[A-Z]+: /, "")); }); });
+    // inside the Android app the page lives on https://localhost, so share the public URL instead
+    $("share").addEventListener("click", function () { copy(window.Capacitor ? "https://drew2apps.com/apps/rgb/" + location.hash : location.href); });
+    $("random").addEventListener("click", function () { setRgb([0, 0, 0].map(function () { return Math.floor(Math.random() * 256); })); update(); });
+
+    function fillScreen() {
+      var d = document.createElement("div"); d.className = "fill"; d.style.background = toHex(S.rgb); d.style.color = getComputedStyle(app).getPropertyValue("--on"); d.textContent = toHex(S.rgb); d.title = "Click to close";
+      d.addEventListener("click", function () { d.remove(); if (document.fullscreenElement) document.exitFullscreen(); });
+      document.body.appendChild(d); if (d.requestFullscreen) d.requestFullscreen().catch(function () {});
+    }
+    $("sw").addEventListener("click", fillScreen);
+    $("sw").addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fillScreen(); } });
+    document.addEventListener("fullscreenchange", function () { if (!document.fullscreenElement) document.querySelectorAll(".fill").forEach(function (d) { d.remove(); }); });
+
+    var favs = [];
+    try { favs = JSON.parse(localStorage.getItem("rgb-favs") || "[]"); } catch (e) {}
+    function loadHex(h) { setRgb(fromHex(h)); update(); }
+    function removeFav(h) { favs = favs.filter(function (x) { return x !== h; }); saveFavs(); }
+    function drawFavs() {
+      // chip row beside the buttons (wide screens)
+      var box = $("favs"); box.innerHTML = "";
+      favs.slice(0, 12).forEach(function (h) {
+        var b = document.createElement("button"); b.type = "button"; b.style.background = h; b.title = h + " (right-click to remove)"; b.setAttribute("aria-label", "Saved " + h);
+        b.addEventListener("click", function () { loadHex(h); });
+        b.addEventListener("contextmenu", function (e) { e.preventDefault(); removeFav(h); });
+        box.appendChild(b);
+      });
+      // full list in the menu
+      var list = $("saved"); list.innerHTML = "";
+      favs.forEach(function (h) {
+        var t = document.createElement("div"); t.className = "tile";
+        t.innerHTML = '<button type="button" class="pick"><i></i></button><button type="button" class="rm" aria-label="Remove ' + h + '">×</button>';
+        var pick = t.firstChild; pick.firstChild.style.background = h; pick.appendChild(document.createTextNode(h)); pick.setAttribute("aria-label", "Use " + h);
+        pick.addEventListener("click", function () { closeMenu(); loadHex(h); });
+        t.lastChild.addEventListener("click", function () { removeFav(h); });
+        list.appendChild(t);
+      });
+      $("savedCount").textContent = favs.length ? "· " + favs.length : "";
+      $("savedEmpty").hidden = favs.length > 0;
+    }
+    function saveFavs() { try { localStorage.setItem("rgb-favs", JSON.stringify(favs)); } catch (e) {} drawFavs(); }
+    $("save").addEventListener("click", function () {
+      var h = toHex(S.rgb); favs = [h].concat(favs.filter(function (x) { return x !== h; })).slice(0, 60); saveFavs();
+      say(matchMedia("(max-width: 860px)").matches ? "Saved " + h + " · find it in ☰" : "Saved " + h);
+    });
+    drawFavs();
+
+    // ---------- menu ----------
+    // Opening adds a history entry, so the Android back button (and the browser's) closes it.
+    var menu = $("menu"), menuOpen = false;
+    function openMenu() {
+      if (menuOpen) return;
+      menuOpen = true; menu.hidden = false;
+      history.pushState({ rgbMenu: 1 }, "", location.href);
+      $("menuClose").focus();
+    }
+    function hideMenu() { menuOpen = false; menu.hidden = true; $("menuBtn").focus(); }
+    function closeMenu() { if (!menuOpen) return; if (history.state && history.state.rgbMenu) history.back(); else hideMenu(); }
+    window.addEventListener("popstate", function () { if (menuOpen) hideMenu(); });
+    $("menuBtn").addEventListener("click", openMenu);
+    $("menuClose").addEventListener("click", closeMenu);
+    menu.addEventListener("click", function (e) { if (e.target === menu) closeMenu(); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && menuOpen) closeMenu(); });
+
+    buildMode();
+  })();
+  </script>
+</body>
+</html>

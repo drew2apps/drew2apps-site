@@ -1,0 +1,16 @@
+{
+  "name": "drew2apps-site",
+  "private": true,
+  "type": "module",
+  "description": "drew2apps.com: small, colorful web apps by Drew Carlson, plus the Thoughts blog",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node build.mjs && npx --yes serve@14.2.4 dist"
+  },
+  "dependencies": {
+    "marked": "18.0.14"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

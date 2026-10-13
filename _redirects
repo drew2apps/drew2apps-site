@@ -1,0 +1,9 @@
+# Old Rails routes -> new site
+/projects   /#apps      301
+/recipes    /           301
+/recipes/*  /           301
+/tutorials  /           301
+/apps/transition   /apps/drift/   301
+/apps/transition/  /apps/drift/   301
+/trace             /apps/trace-race/   302
+/trace/            /apps/trace-race/   302
