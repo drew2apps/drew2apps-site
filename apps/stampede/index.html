@@ -1916,7 +1916,7 @@ function stepFx(dt) {
 
 // ---------------------------------------------------------------- layout + drawing
 const cv = $('#cv'), cx = cv.getContext('2d');
-let VW = 0, VH = 0, DPR = 1, ts = 20, ox = 0, oy = 0;
+let VW = 0, VH = 0, DPR = 1, ts = 20, ox = 0, oy = 0, dprCap = /[?&]hd\b/.test(location.search) ? 3 : 2;
 let boardCache = null, boardKey = '';
 const X = wx => ox + wx * ts, Y = wy => oy + wy * ts;
 
@@ -1977,7 +1977,8 @@ function placeControls(portrait) {
   return { r: VW - 16, b: minY - 10 };
 }
 function layout() {
-  DPR = Math.min(2, window.devicePixelRatio || 1);
+  const oldDpr = DPR; DPR = Math.min(dprCap, window.devicePixelRatio || 1);
+  if (DPR !== oldDpr) SPR.clear();
   const app = $('#app');
   VW = app.offsetWidth; VH = app.offsetHeight;
   cv.width = Math.round(VW * DPR); cv.height = Math.round(VH * DPR);
@@ -2162,11 +2163,29 @@ function hpBar(c, x, y, w, frac, S) {
   rr(c, x + 1, y + 1, Math.max(0, (w - 2) * frac), h - 2, (h - 2) / 2); c.fillStyle = frac > 0.5 ? S.ok : frac > 0.25 ? '#ffc23d' : S.bad; c.fill();
 }
 
+const SPR = new Map(), SPRITE_KINDS = new Set(['wall', 'scare', 'look']);
+function buildingSprite(B, s, S, K, T) {
+  const crack = B.kind === 'wall' ? (B.hp < B.max * 0.33 ? 2 : B.hp < B.max * 0.66 ? 1 : 0) : 0;
+  const key = `${K}|${B.kind}|${B.lv || 1}|${B.ruin ? 1 : 0}|${T.spikes ? 1 : 0}|${crack}|${s}|${DPR}`;
+  let sp = SPR.get(key);
+  if (!sp) {
+    if (SPR.size > 300) SPR.clear();
+    const m = Math.ceil(s * 0.25), w = s + 2 * m, cvs = document.createElement('canvas');
+    cvs.width = Math.ceil(w * DPR); cvs.height = Math.ceil(w * DPR);
+    const sc = cvs.getContext('2d'); sc.setTransform(DPR, 0, 0, DPR, 0, 0);
+    drawBuilding(sc, { kind: B.kind, lv: B.lv, ruin: B.ruin, id: B.id, hp: crack === 2 ? 0.3 : crack === 1 ? 0.6 : 1, max: 1, pop: 0, shake: 0, pulse: 0, ang: 0, sprite: true }, m, m, s, S, K, 0);
+    sp = { cv: cvs, m, w }; SPR.set(key, sp);
+  }
+  return sp;
+}
 function drawBuilding(c, B, x, y, s, S, K, now) {
   const lv = B.lv || 1, look = lv >= 3 ? 'iron' : lv === 2 || B.ruin ? 'stone' : 'wood';
   const T = G ? { stone: L('stone') > 0, spikes: L('spikes') > 0, frost: L('frost') > 0, cannon: L('cannon') > 0, deep: L('deep') > 0 } : {};
   const sh = B.shake > 0 && !reduced ? (Math.random() - 0.5) * s * 0.05 : 0;
   const sx = B.pop > 0 ? 1 + B.pop * 0.8 : 1, sy = B.pop > 0 ? 1 - B.pop * 0.45 : 1;
+  const spr = !B.icon && !B.sprite && !(B.pop > 0) && SPRITE_KINDS.has(B.kind) ? buildingSprite(B, s, S, K, T) : null;
+  if (spr) c.drawImage(spr.cv, x - spr.m + sh, y - spr.m, spr.w, spr.w);
+  else {
   c.save(); c.translate(x + s / 2 + sh, y + s); c.scale(sx, sy); c.translate(-s / 2, -s);
   const ow = Math.max(1.5, s * 0.045);
   if (B.kind === 'mud') {
@@ -2316,6 +2335,8 @@ function drawBuilding(c, B, x, y, s, S, K, now) {
     }
   }
   c.restore();
+  }
+  if (B.sprite) return;
   if (B.dry) { rr(c, x + s * 0.08, y + s * 0.12, s * 0.84, s * 0.78, s * 0.2); c.fillStyle = 'rgba(120,120,130,.5)'; c.fill(); }
   if (B.hp < B.max) hpBar(c, x + s * 0.12, y - ts * 0.22, s * 0.76, B.hp / B.max, S);
   if (lv > 1 && !B.icon) for (let k = 0; k < lv - 1; k++) {
@@ -2629,10 +2650,16 @@ function draw(now) {
   if (g.dugAny) {
     const x0 = Math.max(0, Math.floor(-ox / ts)), x1 = Math.min(g.W - 1, Math.ceil((VW - ox) / ts)), y0 = Math.max(0, Math.floor(-oy / ts)), y1 = Math.min(g.H - 1, Math.ceil((VH - oy) / ts));
     cx.fillStyle = S.dug || '#8a5a35';
-    for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
-      const i = ty * g.W + tx, o = g.ore[i];
-      if (o >= ORE_TILE - 0.5 || g.rock[i] || g.bmap[i] >= 0) continue;
-      cx.globalAlpha = (1 - o / ORE_TILE) * (S.toon ? 0.55 : 0.4); rr(cx, X(tx) + ts * 0.06, Y(ty) + ts * 0.06, ts * 0.88, ts * 0.88, ts * 0.3); cx.fill();
+    for (let band = 1; band <= 4; band++) {
+      cx.beginPath(); let any = false;
+      for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
+        const i = ty * g.W + tx, o = g.ore[i];
+        if (o >= ORE_TILE - 0.5 || g.rock[i] || g.bmap[i] >= 0) continue;
+        if (Math.min(4, Math.ceil((1 - o / ORE_TILE) * 4)) !== band) continue;
+        const x = X(tx) + ts * 0.06, y = Y(ty) + ts * 0.06, w = ts * 0.88, r = ts * 0.3;
+        cx.moveTo(x + r, y); cx.arcTo(x + w, y, x + w, y + w, r); cx.arcTo(x + w, y + w, x, y + w, r); cx.arcTo(x, y + w, x, y, r); cx.arcTo(x, y, x + w, y, r); cx.closePath(); any = true;
+      }
+      if (any) { cx.globalAlpha = band / 4 * (S.toon ? 0.55 : 0.4); cx.fill(); }
     }
     cx.globalAlpha = 1;
   }
@@ -2651,17 +2678,21 @@ function draw(now) {
   // routes
   if (cfg.paths && !g.over) {
     cx.lineCap = 'round'; cx.lineJoin = 'round';
+    const targets = [];
+    cx.beginPath();
     for (const ch of g.ch) {
       if (visAt(ch.x, ch.y) < 0.35) continue;
-      const { pts, target } = chaserPath(ch);
+      if (!ch.route || now - ch.route.at > 0.15 || now < ch.route.at) { ch.route = chaserPath(ch); ch.route.at = now; }
+      const { pts, target } = ch.route;
       if (pts.length < 2 && !target) continue;
-      cx.setLineDash([0.1, ts * 0.42]); cx.lineWidth = Math.max(2, ts * 0.13); cx.strokeStyle = S.path;
-      cx.beginPath(); pts.forEach(([x, y], i) => (i ? cx.lineTo(X(x), Y(y)) : cx.moveTo(X(x), Y(y)))); cx.stroke(); cx.setLineDash([]);
-      if (target) {
-        const tx = X(target.x + 1), ty = Y(target.y + 1), r = ts * 0.32;
-        cx.strokeStyle = S.bad; cx.lineWidth = Math.max(2, ts * 0.12);
-        cx.beginPath(); cx.moveTo(tx - r, ty - r); cx.lineTo(tx + r, ty + r); cx.moveTo(tx + r, ty - r); cx.lineTo(tx - r, ty + r); cx.stroke();
-      }
+      cx.moveTo(X(ch.x), Y(ch.y)); for (let i = 1; i < pts.length; i++) cx.lineTo(X(pts[i][0]), Y(pts[i][1]));
+      if (target) targets.push(target);
+    }
+    cx.setLineDash([0.1, ts * 0.42]); cx.lineWidth = Math.max(2, ts * 0.13); cx.strokeStyle = S.path; cx.stroke(); cx.setLineDash([]);
+    if (targets.length) {
+      const r = ts * 0.32; cx.beginPath();
+      for (const target of targets) { const tx = X(target.x + 1), ty = Y(target.y + 1); cx.moveTo(tx - r, ty - r); cx.lineTo(tx + r, ty + r); cx.moveTo(tx + r, ty - r); cx.lineTo(tx - r, ty + r); }
+      cx.strokeStyle = S.bad; cx.lineWidth = Math.max(2, ts * 0.12); cx.stroke();
     }
   }
 
@@ -2683,8 +2714,10 @@ function draw(now) {
     if (S.ink) inkStroke(cx, S, Math.max(1.5, ts * 0.06));
     for (let j = 0; j < 3; j++) { const a = now * 3 + j * 2.1; cx.beginPath(); cx.arc(X(m.x) + Math.cos(a) * r, Y(m.y) - r * 0.2 + Math.sin(a * 1.3) * r * 0.3, ts * 0.08, 0, 7); cx.fillStyle = S.dug || '#8a5a35'; cx.fill(); }
   }
-  for (const B of g.bld.values()) if (B.kind === 'mud') drawBuilding(cx, B, X(B.x), Y(B.y), 2 * ts, S, K, now);
-  for (const B of g.bld.values()) if (B.kind !== 'mud') drawBuilding(cx, B, X(B.x), Y(B.y), 2 * ts, S, K, now);
+  const cm = ts * 2, inView = (x, y, w) => x > -w - cm && y > -w - cm && x < VW + cm && y < VH + cm;
+  const shown = [];
+  for (const B of g.bld.values()) { const x = X(B.x), y = Y(B.y); if (inView(x, y, 2 * ts)) { if (B.kind === 'mud') drawBuilding(cx, B, x, y, 2 * ts, S, K, now); else shown.push(B); } }
+  for (const B of shown) drawBuilding(cx, B, X(B.x), Y(B.y), 2 * ts, S, K, now);
   drawPOIs(S, K, now, 'objects');
   if (gh && gh.up) upMark(gh.B, gh.u, gh.ok, S, 1);
   if (gh && !gh.raze && !gh.up) {
@@ -2725,7 +2758,7 @@ function draw(now) {
   }
 
   // units, back to front
-  const units = g.ch.map(ch => [ch.y + 0.9, ch]); units.push([g.p.y + 0.4, null]);
+  const units = []; for (const ch of g.ch) { const sz = ((ch.size || 1) + (ch.boss ? 2 : 0)) * ts; if (inView(X(ch.x) - sz, Y(ch.y) - sz, 2 * sz)) units.push([ch.y + 0.9, ch]); } units.push([g.p.y + 0.4, null]);
   units.sort((a, b) => a[0] - b[0]);
   for (const [, ch] of units) {
     if (ch) {
@@ -2746,7 +2779,11 @@ function draw(now) {
   // drifting cloud shadows and little critters
   if (S.clouds && !reduced) {
     cx.fillStyle = 'rgba(30,40,80,.05)';
-    for (const cl of g.clouds) for (const [dx2, dy2, k] of [[0, 0, 1], [cl.rx * 0.5, -cl.ry * 0.3, 0.7], [-cl.rx * 0.5, cl.ry * 0.2, 0.75]]) { cx.beginPath(); cx.ellipse(X(cl.x + dx2), Y(cl.y + dy2), cl.rx * ts * k, cl.ry * ts * k, 0, 0, 7); cx.fill(); }
+    for (const cl of g.clouds) {
+      const px = X(cl.x), py = Y(cl.y), R = cl.rx * ts * 1.6;
+      if (px < -R || py < -R || px > VW + R || py > VH + R) continue;
+      for (const [dx2, dy2, k] of [[0, 0, 1], [cl.rx * 0.5, -cl.ry * 0.3, 0.7], [-cl.rx * 0.5, cl.ry * 0.2, 0.75]]) { cx.beginPath(); cx.ellipse(X(cl.x + dx2), Y(cl.y + dy2), cl.rx * ts * k, cl.ry * ts * k, 0, 0, 7); cx.fill(); }
+    }
   }
   if (S.ambient === 'butterflies' || S.ambient === 'fireflies') {
     for (const f of g.flies) {
@@ -2832,11 +2869,12 @@ function draw(now) {
   }
 
   if (S.ambient === 'snow' && !reduced) {
-    cx.fillStyle = 'rgba(255,255,255,.85)';
+    cx.fillStyle = 'rgba(255,255,255,.85)'; cx.beginPath();
     for (let i = 0; i < 70; i++) {
       const sp = 20 + (i * 37) % 40, px = ((i * 97.3 + Math.sin(now * 0.7 + i) * 30 - ox * 0.2) % VW + VW) % VW, py = ((i * 53.1 + now * sp - oy * 0.2) % VH + VH) % VH;
-      cx.beginPath(); cx.arc(px, py, 1.2 + (i % 3) * 0.8, 0, 7); cx.fill();
+      const r = 1.2 + (i % 3) * 0.8; cx.moveTo(px + r, py); cx.arc(px, py, r, 0, 7);
     }
+    cx.fill();
   }
   drawMinimap(S, K, now);
   drawAlerts(S, K, now);
@@ -2876,17 +2914,20 @@ function drawFog(S, K) {
     g.fogDirty = false;
     const c = fogCv.getContext('2d'), img = c.createImageData(g.W, g.H), d = img.data, nw = rgb(S.fogNew), od = rgb(S.fogOld);
     for (let i = 0; i < g.W * g.H; i++) {
-      let col, a;
-      if (!g.seen[i]) { const n = S.fogNoise ? ((((i * 2654435761) >>> 0) % 997) / 997 - 0.5) * S.fogNoise : 0; col = [nw[0] + n, nw[1] + n, nw[2] + n]; a = 1; }
-      else { col = od; a = (1 - g.vis[i]) * S.fogOldA; }
-      d[i * 4] = col[0]; d[i * 4 + 1] = col[1]; d[i * 4 + 2] = col[2]; d[i * 4 + 3] = Math.round(a * 255);
+      if (!g.seen[i]) { const n = S.fogNoise ? ((((i * 2654435761) >>> 0) % 997) / 997 - 0.5) * S.fogNoise : 0; d[i * 4] = nw[0] + n; d[i * 4 + 1] = nw[1] + n; d[i * 4 + 2] = nw[2] + n; d[i * 4 + 3] = 255; }
+      else { d[i * 4] = od[0]; d[i * 4 + 1] = od[1]; d[i * 4 + 2] = od[2]; d[i * 4 + 3] = Math.round((1 - g.vis[i]) * S.fogOldA * 255); }
     }
     c.putImageData(img, 0, 0);
   }
+  // only the tiles on screen (plus one around them), so the GPU scales a small patch, not the whole board
+  const x0 = clamp(Math.floor(-ox / ts) - 1, 0, g.W), x1 = clamp(Math.ceil((VW - ox) / ts) + 1, 0, g.W);
+  const y0 = clamp(Math.floor(-oy / ts) - 1, 0, g.H), y1 = clamp(Math.ceil((VH - oy) / ts) + 1, 0, g.H);
+  if (x1 <= x0 || y1 <= y0) return;
+  const corner = (x0 === 0 || x1 === g.W) && (y0 === 0 || y1 === g.H);
   cx.save();
-  rr(cx, X(0), Y(0), g.W * ts, g.H * ts, S.toon ? ts * 0.5 : K === 'neon' ? ts * 0.3 : 2); cx.clip();
+  if (corner) { rr(cx, X(0), Y(0), g.W * ts, g.H * ts, S.toon ? ts * 0.5 : K === 'neon' ? ts * 0.3 : 2); cx.clip(); }
   cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = 'high';
-  cx.drawImage(fogCv, X(0), Y(0), g.W * ts, g.H * ts);
+  cx.drawImage(fogCv, x0, y0, x1 - x0, y1 - y0, X(x0), Y(y0), (x1 - x0) * ts, (y1 - y0) * ts);
   cx.restore();
 }
 function drawMinimap(S, K, now) {
@@ -3465,13 +3506,35 @@ if (SITE) {
 }
 
 // ---------------------------------------------------------------- loop
-let last = performance.now(), acc = 0, clock = 0;
+let last = performance.now(), acc = 0, clock = 0, avgGap = 16, slowT = 0;
+// frame timing, for ?fps and profiling: frame gaps and how long each part of a frame takes
+const SHOW_FPS = /[?&]fps\b/.test(location.search);
+function drawFps() {
+  const n = FS.gaps.length; if (n < 10) return;
+  const recent = FS.gaps.slice(-60), avg = recent.reduce((s, v) => s + v, 0) / recent.length, worst = Math.max(...recent);
+  const dr = FS.draw.slice(-60), dm = dr.reduce((s, v) => s + v, 0) / dr.length, st = FS.step.slice(-60), sm = st.reduce((s, v) => s + v, 0) / st.length;
+  const txt = `${Math.round(1000 / avg)} fps · worst ${Math.round(worst)} ms · draw ${dm.toFixed(1)} · sim ${sm.toFixed(1)} ms · ${DPR}x`;
+  cx.save(); cx.setTransform(DPR, 0, 0, DPR, 0, 0); cx.font = '700 12px ui-monospace, Menlo, monospace';
+  const w = cx.measureText(txt).width + 12, x0 = 10 + (SAFE.l || 0), y0 = VH - 28 - (SAFE.b || 0); cx.fillStyle = 'rgba(0,0,0,.6)'; cx.fillRect(x0, y0, w, 18);
+  cx.fillStyle = '#fff'; cx.textAlign = 'left'; cx.textBaseline = 'middle'; cx.fillText(txt, x0 + 6, y0 + 9); cx.restore();
+}
+const FS = { gaps: [], step: [], draw: [], hud: [] };
+const fsPush = (a, v) => { a.push(v); if (a.length > 240) a.shift(); };
 function frame(now) {
-  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  const gap = now - last, dt = Math.min(0.1, gap / 1000); fsPush(FS.gaps, gap); last = now;
+  // a slow machine gets a softer, cheaper canvas instead of a choppy game (2x -> 1.5x -> 1x pixels)
+  if (gap < 250 && G && ui.started && !ui.paused && !document.hidden) {
+    avgGap += (gap - avgGap) * 0.05;
+    slowT = avgGap > 22 ? slowT + gap / 1000 : 0;
+    if (slowT > 2.5 && dprCap > 1 && (window.devicePixelRatio || 1) > 1 && DPR > 1) { dprCap = DPR > 1.5 ? 1.5 : 1; slowT = 0; avgGap = 16; layout(); }
+  }
+  const f0 = performance.now();
   const running = G && ui.started && !ui.paused && !G.over && !(ui.research && cfg.researchPause);
   const scale = running && G.slow > 0 ? 0.35 : 1;
   if (running && G.slow > 0) G.slow -= dt;
-  if (running) { acc += dt * scale; while (acc >= DT) { step(DT); acc -= DT; } } else acc = 0;
+  // one sim step per displayed frame (split if a frame runs long), so motion is smooth at 60, 120 or 144 Hz
+  if (running) { let left = dt * scale; while (left > 1e-6) { const h = Math.min(DT, left); step(h); left -= h; } }
+  const f1 = performance.now(); fsPush(FS.step, f1 - f0);
   if (running) { musicTick(G.queue.length > 0 || G.ch.some(c => Math.hypot(c.x - G.p.x, c.y - G.p.y) < 8)); tipTick(dt); }
   else if (ui.preview && !ui.started) musicTick(false);
   else if (ui.research && G && !G.over && !ui.paused) musicTick(false);
@@ -3479,8 +3542,12 @@ function frame(now) {
   if (G && G.over && ui.endTimer > 0) { ui.endTimer -= dt; if (ui.endTimer <= 0) showEnd(); }
   updateCamera(dt);
   if (ui.pad) { const t = padTarget(); ui.hover = t && !t.cancel ? t : null; padEl.classList.toggle('cancel', !!(t && t.cancel)); }
+  const f2 = performance.now();
   draw(clock);
+  if (SHOW_FPS) drawFps();
+  const f3 = performance.now(); fsPush(FS.draw, f3 - f2);
   updateHud();
+  fsPush(FS.hud, performance.now() - f3);
   requestAnimationFrame(frame);
 }
 
@@ -3501,7 +3568,7 @@ requestAnimationFrame(frame);
 
 // test hooks
 const fitAll = () => { const fw = VW - 32, fh = VH - 32; ts = Math.min(fw / G.W, fh / G.H); view.mode = 'fit'; view.fl = 16; view.ft = 16; view.fr = VW - 16; view.fb = VH - 16; ox = 16 + (fw - G.W * ts) / 2; oy = 16 + (fh - G.H * ts) / 2; boardKey = ''; };
-window.__chase = { get SAFE() { return SAFE; }, FB, fbSend, updateCosts, planWave, fitAll, REC, recSave, herdHp, waveDone, upInfo, upgradeAt, buyPick, tossWell, scrape, wreckStep, maxHp, levelUp, ORE_TILE, pt, applyOrient, padTarget, dropSpot, setTouch, placeControls, get rot() { return rot; }, CARDS, pickCard, applyCard, makeOffer, canPick, startEvent, spawnBoss, waveKinds, updatePalette, TUNES, musicTick, researchReady, openResearch, closeResearch, KINDS, AU, sfx, tipQ, offView, view, pushSpot, covered, MAPS, gapTiles, footprintAt, get G() { return G; }, cfg, newGame, step, place, refreshFields, startRun, restart, setTool, tryBuild, razeAt, checkBuild, ui, layout, setStyle, destroy, spawn, endRun };
+window.__chase = { get bc() { return boardCache; }, get tsv() { return { ts, DPR, VW, VH }; }, draw, updateHud, get frameStats() { return FS; }, get SAFE() { return SAFE; }, FB, fbSend, updateCosts, planWave, fitAll, REC, recSave, herdHp, waveDone, upInfo, upgradeAt, buyPick, tossWell, scrape, wreckStep, maxHp, levelUp, ORE_TILE, pt, applyOrient, padTarget, dropSpot, setTouch, placeControls, get rot() { return rot; }, CARDS, pickCard, applyCard, makeOffer, canPick, startEvent, spawnBoss, waveKinds, updatePalette, TUNES, musicTick, researchReady, openResearch, closeResearch, KINDS, AU, sfx, tipQ, offView, view, pushSpot, covered, MAPS, gapTiles, footprintAt, get G() { return G; }, cfg, newGame, step, place, refreshFields, startRun, restart, setTool, tryBuild, razeAt, checkBuild, ui, layout, setStyle, destroy, spawn, endRun };
 })();
 </script>
 </body>
