@@ -7,5 +7,8 @@
 # short link for sharing Trace Race results
 /trace             /apps/trace-race/   302
 /trace/            /apps/trace-race/   302
+# short link for sharing the Stampede test build
+/stampede          /apps/stampede/     302
+/stampede/         /apps/stampede/     302
 # splat rules last
 /recipes/*         /                   301

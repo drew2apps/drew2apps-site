@@ -21,7 +21,7 @@ const ROOT = path.dirname(new URL(import.meta.url).pathname);
 const OUT = path.join(ROOT, "dist");
 const POSTS = path.join(ROOT, "content", "posts");
 const SITE = "https://drew2apps.com";
-const SKIP = new Set(["dist", "content", "node_modules", ".git", ".github", "build.mjs", "package.json", "package-lock.json", "README.md", ".gitignore", ".DS_Store"]);
+const SKIP = new Set(["dist", "content", "functions", "node_modules", ".git", ".github", "build.mjs", "package.json", "package-lock.json", "README.md", ".gitignore", ".DS_Store"]);
 
 // ---------- 1. static files ----------
 fs.rmSync(OUT, { recursive: true, force: true });

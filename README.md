@@ -21,6 +21,12 @@ npm run dev     # builds, then serves dist/ locally
 
 Cloudflare Pages runs `npm run build` on every push to `main` and publishes `dist/`.
 
+## Stampede (early test)
+
+`apps/stampede/` is an unlisted test build of a new game (no link from the home page, `noindex`, not in the sitemap). Share it as **drew2apps.com/stampede**.
+
+Each run and any feedback is saved by `functions/api/stampede/[action].js` (a Cloudflare Pages Function) into a D1 database bound to the Pages project as `STAMPEDE_DB`. The tables are created on first use. `build.mjs` skips `functions/` so the source isn't copied into `dist/`.
+
 ## Writing a post
 
 Add a file to `content/posts/`, named like `2026-10-13-my-post-title.md`:
