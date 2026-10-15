@@ -406,7 +406,7 @@ body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font-f
       <ul class="rules">
         <li><canvas data-icon="player"></canvas><span>You're small and the munchers are big. You fit through 1-tile gaps; they don't.</span></li>
         <li><canvas data-icon="wall"></canvas><span>Build walls right next to you, even on your own square: you get nudged out of the way. Make munchers take the long way. Wall them in and they chew through.</span></li>
-        <li><canvas data-icon="tower"></canvas><span>Towers shoot until they run out of acorns; walk past to reload. Mines fill up; walk past to collect. They cave in once the ground is dug out. Fix and upgrade what you've built.</span></li>
+        <li><canvas data-icon="tower"></canvas><span>Towers shoot until they run out of acorns; walk past to reload, and a working mine close by keeps them topped up. Mines fill up; walk past to collect. They cave in once the ground is dug out. Fix and upgrade what you've built.</span></li>
         <li><canvas data-icon="fog"></canvas><span>Fog hides the big map: munchers, gold veins, treasure chests and shrines. Survive four acts, three bosses and a final stampede.</span></li>
       </ul>
       </div>
@@ -541,6 +541,11 @@ const WALL_LV = [1, 2.2, 4], TOWER_LV = { hp: [50, 80, 120], dmg: [1, 1.6, 2.4],
 const ORE_TILE = 40, SCRAPE_DPS = 6;
 const TOWER_RANGE = 3.5, TOWER_RATE = 2, TOWER_DMG = 1, TOWER_HP = 50, MINE_HP = 30;
 const MINE_EVERY = 3, MINE_PAY = 2, BOUNTY = 4, CHEW_DPS = 10, FIRST_WAVE = 8, TELE = 3;
+// munchers ease in: 85% of their speed at the start, full speed by 2:30 (so at first you can outrun them)
+const WARM_T = 150, WARM_K = 0.85;
+const warm = g => g.t >= WARM_T ? 1 : WARM_K + (1 - WARM_K) * g.t / WARM_T;
+// a working mine keeps towers near it stocked with acorns
+const FEED_R = 5.5, FEED_RATE = 1.5;
 const PH = 0.36, CH = 0.95, CATCH = 0.84, SH = 0.34, SPIKE_DPS = 4;
 // Muncher types. hp and speed are multipliers on the wave's base values.
 const KINDS = {
@@ -781,7 +786,7 @@ const TIPS = {
   pad: 'Left thumb runs. Right thumb: tap the big round button to drop a wall behind you, or drag it to aim.',
   research: 'An upgrade is ready! Tap the flask button (or press E) to pick one of three. The game pauses while you choose.',
   minefull: 'A mine is full! Walk next to it to collect the gold. Full mines stop digging.',
-  ammo: 'A tower is out of acorns. Walk past it to reload.',
+  ammo: 'A tower is out of acorns. Walk past it to reload, or build a mine close by: working mines keep nearby towers stocked.',
   chest: 'Treasure! Chests hide in the fog. Each one gives gold and a free upgrade.',
   shrine: 'Shrines give a short boost, then recharge.',
   vein: 'Mines on a gold vein dig double, until the vein runs dry.',
@@ -1477,6 +1482,7 @@ function step(dt) {
   if (g.gold >= 250) tip('rich');
 
   const reachT = g.reach + 0.75;
+  const feeders = []; for (const B of g.bld.values()) if (B.kind === 'mine' && !B.ruin && !B.dry) feeders.push(B);
   for (const B of [...g.bld.values()]) {
     if (B.pop > 0) B.pop -= dt;
     if (B.recoil > 0) B.recoil -= dt;
@@ -1488,13 +1494,14 @@ function step(dt) {
       // towers run out of acorns; walk past to reload
       const cap = ammoCap(B), lvi = (B.lv || 1) - 1;
       if (near <= reachT && B.ammo < cap) { if (B.ammo < 1) sfx('reload', B.x + 1, B.y + 1); B.ammo = Math.min(cap, B.ammo + (20 + 10 * L('mag')) * dt); }
+      else if (!B.ruin && B.ammo < cap) { B.fed = false; for (const M of feeders) if (Math.abs(M.x - B.x) <= FEED_R && Math.abs(M.y - B.y) <= FEED_R && Math.hypot(M.x - B.x, M.y - B.y) <= FEED_R) { B.ammo = Math.min(cap, B.ammo + FEED_RATE * MINE_LV.rate[(M.lv || 1) - 1] * dt); B.fed = true; break; } }
       B.cd -= dt;
       if (B.cd <= 0 && B.ammo >= 1) {
         const cx = B.x + 1, cy = B.y + 1, range = TOWER_RANGE + 0.75 * L('sharp') + TOWER_LV.range[lvi]; let tgt = null, bd = Infinity;
         for (const c of g.ch) { const d = Math.hypot(c.x - cx, c.y - cy); if (!c.dead && d <= range + (c.size === 2 ? 0.9 : 0.35) && d < bd) { bd = d; tgt = c; } }
         if (tgt) {
           B.cd = 1 / (TOWER_RATE * Math.pow(1.25, L('rapid'))); B.ang = Math.atan2(tgt.y - cy, tgt.x - cx); B.recoil = 0.12; B.ammo -= 1;
-          if (B.ammo < 1) { tip('ammo'); if (offView(cx, cy) && ui.started) toast('A tower ran out of acorns. Walk past it to reload.'); }
+          if (B.ammo < 1) { tip('ammo'); if (offView(cx, cy) && ui.started) toast('A tower ran out of acorns. Walk past it, or build a mine next to it.'); }
           const x1 = cx + Math.cos(B.ang) * 0.75, y1 = cy + Math.sin(B.ang) * 0.75, kind = L('cannon') ? 'cannon' : L('frost') ? 'frost' : 'dart';
           g.shots.push({ x1, y1, x2: tgt.x, y2: tgt.y, t: 0.16 });
           g.proj.push({ x1, y1, x2: tgt.x, y2: tgt.y, t: 0, d: 0.06 + bd * 0.03, kind });
@@ -1707,7 +1714,7 @@ function chaserStep(c, dt) {
   }
   if (d < 1e-4) return;
   const mud = g.mud[clamp(Math.floor(c.y), 0, g.H - 1) * g.W + clamp(Math.floor(c.x), 0, g.W - 1)] ? 0.45 : 1;
-  const sp = g.cSpeed * K.speed * c.fast * (c.boss ? 0.85 : 1) * mud * (c.slowT > 0 ? 0.55 : 1) * (mode === 'chew' ? 0.5 : 1), m = Math.min(sp * dt, d);
+  const sp = g.cSpeed * warm(g) * K.speed * c.fast * (c.boss ? 0.85 : 1) * mud * (c.slowT > 0 ? 0.55 : 1) * (mode === 'chew' ? 0.5 : 1), m = Math.min(sp * dt, d);
   moveBox(c, dx / d * m, dy / d * m, c.half);
   if (mode !== 'chew') { c.fx = dx / d; c.fy = dy / d; }
   c.walk += m; c.moving = true;
@@ -1735,7 +1742,7 @@ function wreckStep(c, dt) {
   }
   if (c.wreckT > 9) { c.wreck = null; c.wreckCd = 5; return false; }
   const d = Math.hypot(dx, dy) || 1, mud = g.mud[clamp(Math.floor(c.y), 0, g.H - 1) * g.W + clamp(Math.floor(c.x), 0, g.W - 1)] ? 0.45 : 1;
-  const m = g.cSpeed * KINDS.wrecker.speed * c.fast * (c.boss ? 0.85 : 1) * mud * (c.slowT > 0 ? 0.55 : 1) * dt, x0 = c.x, y0 = c.y;
+  const m = g.cSpeed * warm(g) * KINDS.wrecker.speed * c.fast * (c.boss ? 0.85 : 1) * mud * (c.slowT > 0 ? 0.55 : 1) * dt, x0 = c.x, y0 = c.y;
   moveBox(c, dx / d * m, dy / d * m, c.half);
   c.wreckStuck = Math.hypot(c.x - x0, c.y - y0) < m * 0.3 ? c.wreckStuck + dt : 0;
   if (c.wreckStuck > 0.6) { c.wreck = null; c.wreckCd = 3; return false; }
@@ -2177,6 +2184,18 @@ function buildingSprite(B, s, S, K, T) {
     sp = { cv: cvs, m, w }; SPR.set(key, sp);
   }
   return sp;
+}
+function feedLinks(bx, by, tool, S, now) {
+  if (tool !== 'tower' && tool !== 'mine') return;
+  const want = tool === 'tower' ? 'mine' : 'tower'; let n = 0;
+  cx.beginPath();
+  for (const B of G.bld.values()) {
+    if (B.kind !== want || B.ruin || (want === 'mine' && B.dry) || Math.hypot(B.x - bx, B.y - by) > FEED_R) continue;
+    cx.moveTo(X(bx + 1), Y(by + 1)); cx.lineTo(X(B.x + 1), Y(B.y + 1)); n++;
+  }
+  if (!n) return;
+  cx.setLineDash([ts * 0.12, ts * 0.16]); cx.lineDashOffset = -now * ts * 0.8; cx.lineWidth = Math.max(2, ts * 0.09); cx.strokeStyle = S.ok; cx.globalAlpha = 0.85; cx.lineCap = 'round';
+  cx.stroke(); cx.setLineDash([]); cx.lineDashOffset = 0; cx.globalAlpha = 1;
 }
 function drawBuilding(c, B, x, y, s, S, K, now) {
   const lv = B.lv || 1, look = lv >= 3 ? 'iron' : lv === 2 || B.ruin ? 'stone' : 'wood';
@@ -2730,6 +2749,7 @@ function draw(now) {
       cx.beginPath(); cx.moveTo(X(G.p.x), Y(G.p.y)); cx.lineTo(tx, ty); cx.stroke(); cx.setLineDash([]);
       cx.beginPath(); cx.arc(tx, ty, ts * 0.32, 0, 7); cx.stroke();
     }
+    if (gh.ok) feedLinks(gh.bx, gh.by, ui.tool, S, now);
     if (ui.tool === 'tower') { cx.beginPath(); cx.arc(x + ts, y + ts, TOWER_RANGE * ts, 0, 7); cx.strokeStyle = col; cx.globalAlpha = 0.6; cx.setLineDash([ts * 0.15, ts * 0.2]); cx.stroke(); cx.setLineDash([]); cx.globalAlpha = 1; }
   }
   // on touch, a faint outline shows where a tap on the build pad will drop
@@ -2738,6 +2758,7 @@ function draw(now) {
     const d = dropSpot();
     if (d && d.ok) {
       const x = X(d.x - 1), y = Y(d.y - 1), s = 2 * ts;
+      feedLinks(d.x - 1, d.y - 1, ui.tool, S, now);
       rr(cx, x + 3, y + 3, s - 6, s - 6, ts * 0.3); cx.globalAlpha = 0.22; cx.fillStyle = S.ok; cx.fill();
       cx.globalAlpha = 0.9; cx.setLineDash([ts * 0.2, ts * 0.14]); cx.lineDashOffset = -now * ts * 0.5; cx.lineWidth = Math.max(2, ts * 0.1); cx.strokeStyle = S.ok; cx.stroke(); cx.setLineDash([]); cx.lineDashOffset = 0; cx.globalAlpha = 1;
     }
@@ -3568,7 +3589,7 @@ requestAnimationFrame(frame);
 
 // test hooks
 const fitAll = () => { const fw = VW - 32, fh = VH - 32; ts = Math.min(fw / G.W, fh / G.H); view.mode = 'fit'; view.fl = 16; view.ft = 16; view.fr = VW - 16; view.fb = VH - 16; ox = 16 + (fw - G.W * ts) / 2; oy = 16 + (fh - G.H * ts) / 2; boardKey = ''; };
-window.__chase = { get bc() { return boardCache; }, get tsv() { return { ts, DPR, VW, VH }; }, draw, updateHud, get frameStats() { return FS; }, get SAFE() { return SAFE; }, FB, fbSend, updateCosts, planWave, fitAll, REC, recSave, herdHp, waveDone, upInfo, upgradeAt, buyPick, tossWell, scrape, wreckStep, maxHp, levelUp, ORE_TILE, pt, applyOrient, padTarget, dropSpot, setTouch, placeControls, get rot() { return rot; }, CARDS, pickCard, applyCard, makeOffer, canPick, startEvent, spawnBoss, waveKinds, updatePalette, TUNES, musicTick, researchReady, openResearch, closeResearch, KINDS, AU, sfx, tipQ, offView, view, pushSpot, covered, MAPS, gapTiles, footprintAt, get G() { return G; }, cfg, newGame, step, place, refreshFields, startRun, restart, setTool, tryBuild, razeAt, checkBuild, ui, layout, setStyle, destroy, spawn, endRun };
+window.__chase = { warm, FEED_R, get bc() { return boardCache; }, get tsv() { return { ts, DPR, VW, VH, ox, oy }; }, draw, updateHud, get frameStats() { return FS; }, get SAFE() { return SAFE; }, FB, fbSend, updateCosts, planWave, fitAll, REC, recSave, herdHp, waveDone, upInfo, upgradeAt, buyPick, tossWell, scrape, wreckStep, maxHp, levelUp, ORE_TILE, pt, applyOrient, padTarget, dropSpot, setTouch, placeControls, get rot() { return rot; }, CARDS, pickCard, applyCard, makeOffer, canPick, startEvent, spawnBoss, waveKinds, updatePalette, TUNES, musicTick, researchReady, openResearch, closeResearch, KINDS, AU, sfx, tipQ, offView, view, pushSpot, covered, MAPS, gapTiles, footprintAt, get G() { return G; }, cfg, newGame, step, place, refreshFields, startRun, restart, setTool, tryBuild, razeAt, checkBuild, ui, layout, setStyle, destroy, spawn, endRun };
 })();
 </script>
 </body>
