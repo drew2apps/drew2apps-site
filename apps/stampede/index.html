@@ -301,6 +301,17 @@ body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font-f
 #pad.poor em { color: var(--bad); }
 #pad.held { transform: scale(.93); background: var(--sel); }
 #pad.cancel { opacity: .55; box-shadow: 0 0 0 4px var(--muted), var(--lift); }
+#fork { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 30; width: min(560px, calc(100% - 32px)); background: var(--panel); color: var(--ink);
+  border: var(--bw) solid var(--line); border-radius: var(--radius); box-shadow: var(--lift-lg); padding: 14px; display: grid; gap: 10px; font-family: var(--font-b); }
+#fork > b { font-family: var(--font-d); font-weight: var(--dw); font-size: 18px; text-align: center; }
+#fork .fork-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+#fork button[data-br] { display: grid; gap: 4px; text-align: left; padding: 12px; border-radius: 12px; border: var(--bw) solid var(--line); background: var(--sel); color: var(--ink); cursor: pointer; font: inherit; min-height: 44px; box-shadow: var(--lift); }
+#fork button[data-br]:hover, #fork button[data-br]:focus-visible { box-shadow: 0 0 0 3px var(--accent), var(--lift); }
+#fork button[data-br] strong { font-family: var(--font-d); font-weight: var(--dw); font-size: 18px; }
+#fork button[data-br] small { color: var(--muted); font-size: 13px; line-height: 1.3; }
+#fork kbd { justify-self: start; font: 700 11px/1 var(--font-b); color: var(--muted); border: 1px solid var(--muted); border-radius: 5px; padding: 2px 5px; }
+:root.touch #fork kbd { display: none; }
+#fork .fork-x { justify-self: center; background: none; border: 0; color: var(--muted); font: 700 14px var(--font-b); cursor: pointer; padding: 8px 12px; min-height: 40px; }
 :root.touch #pal, :root.touch #pal.two { position: absolute; inset: 0; width: auto; transform: none; display: block; pointer-events: none; }
 :root.touch .tool { position: absolute; left: 0; top: 0; width: var(--tb, 52px); height: var(--tb, 52px); padding: 4px 0 0; justify-content: flex-start; gap: 0; pointer-events: auto; border-radius: 16px; }
 :root.touch .tool b, :root.touch .tool kbd { display: none; }
@@ -381,6 +392,14 @@ body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font-f
     <button class="tool" type="button" data-tool="raze" aria-pressed="false" aria-label="Knock down"><kbd>4</kbd><canvas data-icon="raze"></canvas><b>Knock</b><em>down</em></button>
   </nav>
   <div id="pad" role="button" aria-label="Build wall"><canvas data-icon="wall"></canvas><em>3</em></div>
+  <div id="fork" role="dialog" aria-label="Upgrade the lookout" hidden>
+    <b>Upgrade the lookout · <span id="forkCost">20</span> gold</b>
+    <div class="fork-opts">
+      <button type="button" data-br="spot"><kbd>1</kbd><strong>Spotter</strong><small>Towers in its circle reach further and hit harder. Level 3 fires a slowing flare.</small></button>
+      <button type="button" data-br="snipe"><kbd>2</kbd><strong>Sniper</strong><small>Long, heavy shots at the toughest muncher. Great against tanks and bosses.</small></button>
+    </div>
+    <button type="button" class="fork-x" id="forkCancel">Not now</button>
+  </div>
 
   <div id="toast" role="status" aria-live="polite"></div>
   <div class="chip" id="cBuff" hidden><span id="tBuff"></span></div>
@@ -518,7 +537,7 @@ const SITE = window.STAMPEDE || null;
 if (SITE) root.classList.add('site');
 
 // ---------------------------------------------------------------- settings
-const DEF = { reach: 3, pSpeed: 5, cPct: 108, gold: 50, wallCost: 3, waveEvery: 20, round: 1200, wallHp: 40, grace: 4, stunHit: 3, spawn: 'edges', map: 'huge', fog: true, vision: 7, trickle: 1.5, paths: true, sound: true, music: true, tips: true, researchPause: true, rpKill: 3, monsters: 'mixed', tune: 'meadow', style: 'cartoon', phone: 'left', herd: 'normal', adapt: true };
+const DEF = { reach: 3, pSpeed: 5, cPct: 108, gold: 50, wallCost: 3, waveEvery: 20, round: 1200, wallHp: 40, grace: 4, stunHit: 3, spawn: 'edges', map: 'huge', fog: true, vision: 7, trickle: 1.5, paths: true, sound: true, music: true, tips: true, researchPause: true, touchHeart: true, rpKill: 3, monsters: 'mixed', tune: 'meadow', style: 'cartoon', phone: 'left', herd: 'normal', adapt: true };
 const store = {
   get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* storage off */ } },
@@ -534,8 +553,8 @@ const MAPS = { normal: [32, 20], big: [48, 30], huge: [64, 40], giant: [96, 60] 
 const COST = { wall: 5, tower: 25, mine: 20, mud: 8, scare: 15, look: 10 };
 const TOWER_BASE = 25, TOWER_STEP = 5, MINE_BASE = 20, MINE_STEP = 5;
 // Fix & upgrade. Each building can go up in place; the price of each next level is listed here.
-const UP_COST = { wall: [12, 30], tower: [40, 100], mine: [35, 80], scare: [30], look: [20] };
-const LV_NAME = { wall: ['Wood wall', 'Stone wall', 'Iron wall'], tower: ['Tower', 'Tower II', 'Tower III'], mine: ['Mine', 'Mine II', 'Deep shaft'], scare: ['Scarecrow', 'Big scarecrow'], look: ['Lookout', 'Tall lookout'] };
+const UP_COST = { wall: [12, 30], tower: [40, 100], mine: [35, 80], scare: [30], look: [20, 45] };
+const LV_NAME = { wall: ['Wood wall', 'Stone wall', 'Iron wall'], tower: ['Tower', 'Tower II', 'Tower III'], mine: ['Mine', 'Mine II', 'Deep shaft'], scare: ['Scarecrow', 'Big scarecrow'], look: ['Lookout', 'Tall lookout', 'Watchtower'] };
 const WALL_LV = [1, 2.2, 4], TOWER_LV = { hp: [50, 80, 120], dmg: [1, 1.6, 2.4], range: [0, 0.6, 1.2], ammo: [0, 15, 30] }, MINE_LV = { rate: [1, 1.4, 1.8], cart: [1, 1.5, 2], hp: [30, 50, 70] };
 // Ground ore: each tile holds a little gold, so a mine (2x2) digs out about 160 and then runs dry.
 const ORE_TILE = 40, SCRAPE_DPS = 6;
@@ -578,7 +597,7 @@ const CARDS = {
   grace: { name: 'Second wind', icon: 'heart', max: 2, text: 'Stay untouchable 1.5 s longer after a hit.' },
   mud: { name: 'Mud pits', icon: 'mud', max: 1, unlock: true, text: "New building: munchers wade slowly through mud. You don't." },
   scare: { name: 'Scarecrow', icon: 'scare', max: 1, unlock: true, text: 'New building: spooks munchers nearby every 10 seconds.' },
-  look: { name: 'Lookout', icon: 'look', max: 1, unlock: true, text: 'New building: sees far through the fog.' },
+  look: { name: 'Lookout', icon: 'look', max: 1, unlock: true, text: 'New building: sees far through the fog. At level 2 it becomes a Spotter or a Sniper.' },
   thorns: { name: 'Thorn walls', icon: 'wall', max: 1, combo: ['stone', 'spikes'], text: 'Combo! Spikes hurt three times as much and slow chewers.' },
   blizzard: { name: 'Blizzard', icon: 'tower', max: 1, combo: ['frost', 'cannon'], text: 'Combo! Tower hits can freeze munchers solid.' },
   goldrush: { name: 'Gold rush', icon: 'mine', max: 1, combo: ['deep', 'bounty'], text: 'Combo! Every kill pays 5 extra gold and research.' },
@@ -786,6 +805,8 @@ const TIPS = {
   pad: 'Left thumb runs. Right thumb: tap the big round button to drop a wall behind you, or drag it to aim.',
   research: 'An upgrade is ready! Tap the flask button (or press E) to pick one of three. The game pauses while you choose.',
   minefull: 'A mine is full! Walk next to it to collect the gold. Full mines stop digging.',
+  aimslow: 'Holding the build button slows time for a moment, so you can aim. Let go to build, or drag far away to cancel.',
+  fork: 'Lookouts branch at level 2. A Spotter powers up nearby towers; a Sniper picks off the toughest muncher.',
   ammo: 'A tower is out of acorns. Walk past it to reload, or build a mine close by: working mines keep nearby towers stocked.',
   chest: 'Treasure! Chests hide in the fog. Each one gives gold and a free upgrade.',
   shrine: 'Shrines give a short boost, then recharge.',
@@ -818,7 +839,8 @@ function hideTip() { ui.tipId = null; $('#tip').hidden = true; }
 
 // ---------------------------------------------------------------- game state
 let G = null;
-const ui = { started: false, paused: false, tool: 'wall', hover: null, mouse: false, joy: null, joyPtr: null, buildPtr: null, pad: null, padPtr: null, touch: matchMedia('(pointer: coarse)').matches, testMove: null, endTimer: 0 };
+const AIM_SLOW = 1.5;
+const ui = { aimT: 0, slowmo: false, fork: null, started: false, paused: false, tool: 'wall', hover: null, mouse: false, joy: null, joyPtr: null, buildPtr: null, pad: null, padPtr: null, touch: matchMedia('(pointer: coarse)').matches, testMove: null, endTimer: 0 };
 
 function newGame(seed) {
   seed = seed ?? ((Math.random() * 2 ** 31) | 0);
@@ -827,7 +849,7 @@ function newGame(seed) {
   { const el = document.querySelector('[data-cost="wall"]'); if (el) el.textContent = COST.wall; }
   const g = {
     W, H, AW: W - 1, AH: H - 1, seed, R: mulberry(seed), t: 0, over: null, endT: 0,
-    hearts: 3, maxHearts: 3, inv: 0, shake: 0, flash: 0,
+    hearts: ui.touch && cfg.touchHeart ? 4 : 3, maxHearts: ui.touch && cfg.touchHeart ? 4 : 3, inv: 0, shake: 0, flash: 0,
     gold: cfg.gold, spent: 0, kills: 0, built: 0, razed: 0, hits: 0,
     rock: new Uint8Array(W * H), den: new Uint8Array(W * H), bmap: new Int32Array(W * H).fill(-1), denRect: null,
     bld: new Map(), nid: 1, cid: 1, ch: [], shots: [], fx: [], floats: [], tufts: [],
@@ -1097,7 +1119,7 @@ function updateVision() {
   };
   src(g.p.x, g.p.y, (g.vision + (g.buffs.sight > 0 ? 6 : 0)) * (g.nightT > 0 ? 0.55 : 1));
   const night = g.nightT > 0 ? 0.55 : 1;
-  for (const B of g.bld.values()) if (!B.ruin && B.kind !== 'mud') src(B.x + 1, B.y + 1, (B.kind === 'tower' ? TOWER_RANGE + 1 + 0.75 * L('sharp') + TOWER_LV.range[(B.lv || 1) - 1] : B.kind === 'look' ? ((B.lv || 1) > 1 ? 12 : 9) : B.kind === 'mine' ? 2.5 : 2.2) * (B.kind === 'look' ? 1 : night));
+  for (const B of g.bld.values()) if (!B.ruin && B.kind !== 'mud') src(B.x + 1, B.y + 1, (B.kind === 'tower' ? TOWER_RANGE + 1 + 0.75 * L('sharp') + TOWER_LV.range[(B.lv || 1) - 1] : B.kind === 'look' ? [0, 9, 12, 14][B.lv || 1] : B.kind === 'mine' ? 2.5 : 2.2) * (B.kind === 'look' ? 1 : night));
   g.fogDirty = true;
 }
 function visAt(x, y) {
@@ -1160,7 +1182,7 @@ function place(kind, bx, by) {
     if (kind === 'mud') { g.mud[y * g.W + x] = 1; g.mudmap[y * g.W + x] = id; } else g.bmap[y * g.W + x] = id;
   }
   g.bld.set(id, B); g.dirty = true; g.visT = 0;
-  if (kind === 'tower' || kind === 'mine') updateCosts();
+  if (kind === 'tower' || kind === 'mine' || kind === 'look') updateCosts();
   if (B.vein) { toast('Mine on a gold vein: double gold until it runs dry.'); tip('vein'); }
   return B;
 }
@@ -1185,10 +1207,11 @@ function tryBuild(w) {
 // Towers get pricier the more you own, so a field of towers stops being the answer to everything.
 function updateCosts() {
   const g = G; if (!g) return;
-  let n = 0, m = 0; for (const B of g.bld.values()) { if (B.kind === 'tower') n++; else if (B.kind === 'mine') m++; }
+  let n = 0, m = 0, k = 0; for (const B of g.bld.values()) { if (B.kind === 'tower') n++; else if (B.kind === 'mine') m++; else if (B.kind === 'look') k++; }
   COST.tower = TOWER_BASE + TOWER_STEP * n;
   COST.mine = MINE_BASE + MINE_STEP * m;
-  for (const k of ['tower', 'mine']) { const el = document.querySelector(`[data-cost="${k}"]`); if (el) el.textContent = COST[k]; }
+  COST.look = 10 + 10 * k; // each lookout costs 10 more, so a row of snipers isn't the answer to everything
+  for (const k of ['tower', 'mine', 'look']) { const el = document.querySelector(`[data-cost="${k}"]`); if (el) el.textContent = COST[k]; }
   if ((n >= 4 || m >= 4) && ui.started) tip('towercost');
 }
 function maxHp(B) {
@@ -1207,6 +1230,7 @@ function upInfo(B) {
   if (miss > 0.02) return { act: 'fix', cost: Math.max(1, Math.ceil((B.worth || 3) * miss * 0.5)), label: 'Fix' };
   const ups = UP_COST[B.kind], lv = B.lv || 1;
   if (!ups || lv > ups.length) return { act: 'max', cost: 0, label: 'Max' };
+  if (B.kind === 'look') return { act: 'up', cost: ups[lv - 1], label: lv === 1 ? 'Spotter or Sniper' : B.br === 'snipe' ? 'Eagle nest' : 'Signal tower' };
   return { act: 'up', cost: ups[lv - 1], label: LV_NAME[B.kind][lv] };
 }
 function bldAt(w) { const g = G; if (w.x < 0 || w.y < 0 || w.x >= g.W || w.y >= g.H) return null; const id = g.bmap[(w.y | 0) * g.W + (w.x | 0)]; return id >= 0 ? g.bld.get(id) : null; }
@@ -1224,11 +1248,44 @@ function upgradeAt(w) {
   const u = upInfo(B);
   if (!u || u.act === 'max') { toast(B.kind === 'mud' ? "Mud can't be upgraded." : 'That one is as good as it gets.'); sfx('deny'); return false; }
   if (g.gold < u.cost) { toast(`Not enough gold. ${u.act === 'fix' ? 'Fixing' : 'Upgrading'} costs ${u.cost}.`); sfx('deny'); return false; }
+  if (u.act === 'up' && B.kind === 'look' && (B.lv || 1) === 1) { openFork(B, u.cost); return true; }
   g.gold -= u.cost; g.spent += u.cost;
   recEv(u.act, [B.kind, (B.lv || 1) + (u.act === 'up' ? 1 : 0), u.cost]);
   if (u.act === 'up') { B.worth = (B.worth || 3) + u.cost; levelUp(B); floatText(B.x + 1, B.y - 0.2, `${u.label}!`, 'gold'); puff(B.x + 1, B.y + 1, 'mine', 14); sfx('research'); }
   else { B.hp = B.max; B.pop = 0.2; g.dirty = true; floatText(B.x + 1, B.y - 0.2, 'Fixed!', 'gold'); ring(B.x + 1, B.y + 1, 0.8, 2.1, 'dust'); sfx('build'); }
   return true;
+}
+// The lookout's level-2 fork: two big buttons, time slowed while you choose, nothing spent until you pick.
+function openFork(B, cost) {
+  ui.fork = { id: B.id, cost };
+  const el = $('#fork'); el.hidden = false; $('#forkCost').textContent = cost;
+  tip('fork'); sfx('research');
+  setTimeout(() => { const b = el.querySelector('button[data-br]'); if (b && !ui.touch) b.focus(); }, 0);
+}
+function closeFork() { ui.fork = null; $('#fork').hidden = true; }
+function chooseFork(br) {
+  const g = G, f = ui.fork; if (!g || !f) return false;
+  const B = g.bld.get(f.id);
+  closeFork();
+  if (!B || B.ruin || (B.lv || 1) !== 1) return false;
+  if (g.gold < f.cost) { toast(`Not enough gold. It costs ${f.cost}.`); sfx('deny'); return false; }
+  g.gold -= f.cost; g.spent += f.cost; B.worth = (B.worth || 3) + f.cost;
+  B.br = br === 'snipe' ? 'snipe' : 'spot'; B.cd = 0;
+  levelUp(B);
+  recEv('up', ['look', 2, f.cost, B.br]);
+  floatText(B.x + 1, B.y - 0.2, B.br === 'snipe' ? 'Sniper!' : 'Spotter!', 'gold'); puff(B.x + 1, B.y + 1, 'mine', 14); sfx('research');
+  toast(B.br === 'snipe' ? 'Sniper: it picks off the toughest muncher in a long range.' : 'Spotter: towers inside its circle reach further and hit harder.');
+  return true;
+}
+const SPOT_R = [0, 0, 5, 6], SNIPE = { range: [0, 0, 9, 11], cd: [0, 0, 2.6, 1.8], hit: [0, 0, 0.45, 0.65] };
+// how much a nearby Spotter boosts a tower: extra range and a damage multiplier
+function spotBoost(B, spotters) {
+  let r = 0, m = 1;
+  for (const S of spotters) {
+    const lv = S.lv || 1;
+    if (Math.hypot(S.x - B.x, S.y - B.y) <= SPOT_R[lv]) { r = Math.max(r, lv >= 3 ? 1.5 : 1); m = Math.max(m, lv >= 3 ? 1.5 : 1.3); }
+  }
+  return { r, m };
 }
 function razeAt(w) {
   const g = G;
@@ -1245,7 +1302,7 @@ function destroy(B, byPlayer) {
   const g = G;
   for (let y = B.y; y < B.y + 2; y++) for (let x = B.x; x < B.x + 2; x++) { const i = y * g.W + x; if (B.kind === 'mud') { g.mud[i] = 0; g.mudmap[i] = -1; } else g.bmap[i] = -1; }
   g.bld.delete(B.id); g.dirty = true;
-  if (B.kind === 'tower' || B.kind === 'mine') updateCosts();
+  if (B.kind === 'tower' || B.kind === 'mine' || B.kind === 'look') updateCosts();
   if (B.kind === 'mine' && B.ore > 0) for (let y = B.y; y < B.y + 2; y++) for (let x = B.x; x < B.x + 2; x++) g.ore[y * g.W + x] += B.ore / 4;
   if (byPlayer) g.razed++;
   puff(B.x + 1, B.y + 1, B.kind, 18);
@@ -1462,7 +1519,7 @@ function step(dt) {
 
   // things on the map: chests open when you walk onto them, shrines give a short boost
   for (const P of g.pois) {
-    if (P.type === 'chest' && !P.open && Math.hypot(P.x - p.x, P.y - p.y) < 1) {
+    if (P.type === 'chest' && !P.open && Math.hypot(P.x - p.x, P.y - p.y) < (ui.touch ? 1.5 : 1)) {
       P.open = true; P.openT = g.t; g.free++; g.lastFree = 'chest'; recEv('chest', P.boss ? 'boss' : 'plain'); const gold = P.boss ? 40 : 15; g.gold += gold;
       floatText(P.x, P.y - 0.8, `+${gold} and a free upgrade!`, 'gold'); ring(P.x, P.y, 0.4, 2.2, 'gold'); puff(P.x, P.y, 'mine', 18); sfx('chest'); tip('chest');
       if (ui.started) openResearch();
@@ -1481,8 +1538,8 @@ function step(dt) {
   if (g.nearWell) tip('well');
   if (g.gold >= 250) tip('rich');
 
-  const reachT = g.reach + 0.75;
-  const feeders = []; for (const B of g.bld.values()) if (B.kind === 'mine' && !B.ruin && !B.dry) feeders.push(B);
+  const reachT = g.reach + (ui.touch ? 1.75 : 0.75), grab = ui.touch ? 3.4 : 2.4;
+  const feeders = [], spotters = []; for (const B of g.bld.values()) { if (B.ruin) continue; if (B.kind === 'mine' && !B.dry) feeders.push(B); else if (B.kind === 'look' && B.br === 'spot') spotters.push(B); }
   for (const B of [...g.bld.values()]) {
     if (B.pop > 0) B.pop -= dt;
     if (B.recoil > 0) B.recoil -= dt;
@@ -1497,7 +1554,8 @@ function step(dt) {
       else if (!B.ruin && B.ammo < cap) { B.fed = false; for (const M of feeders) if (Math.abs(M.x - B.x) <= FEED_R && Math.abs(M.y - B.y) <= FEED_R && Math.hypot(M.x - B.x, M.y - B.y) <= FEED_R) { B.ammo = Math.min(cap, B.ammo + FEED_RATE * MINE_LV.rate[(M.lv || 1) - 1] * dt); B.fed = true; break; } }
       B.cd -= dt;
       if (B.cd <= 0 && B.ammo >= 1) {
-        const cx = B.x + 1, cy = B.y + 1, range = TOWER_RANGE + 0.75 * L('sharp') + TOWER_LV.range[lvi]; let tgt = null, bd = Infinity;
+        const boost = spotters.length ? spotBoost(B, spotters) : { r: 0, m: 1 };
+        const cx = B.x + 1, cy = B.y + 1, range = TOWER_RANGE + 0.75 * L('sharp') + TOWER_LV.range[lvi] + boost.r; let tgt = null, bd = Infinity;
         for (const c of g.ch) { const d = Math.hypot(c.x - cx, c.y - cy); if (!c.dead && d <= range + (c.size === 2 ? 0.9 : 0.35) && d < bd) { bd = d; tgt = c; } }
         if (tgt) {
           B.cd = 1 / (TOWER_RATE * Math.pow(1.25, L('rapid'))); B.ang = Math.atan2(tgt.y - cy, tgt.x - cx); B.recoil = 0.12; B.ammo -= 1;
@@ -1506,13 +1564,34 @@ function step(dt) {
           g.shots.push({ x1, y1, x2: tgt.x, y2: tgt.y, t: 0.16 });
           g.proj.push({ x1, y1, x2: tgt.x, y2: tgt.y, t: 0, d: 0.06 + bd * 0.03, kind });
           const slow = [0, 1.2, 2][L('frost')], freeze = L('blizzard') && Math.random() < 0.25;
-          const dmg = TOWER_DMG * TOWER_LV.dmg[lvi];
+          const dmg = TOWER_DMG * TOWER_LV.dmg[lvi] * boost.m;
           const hit = o => { if (slow) o.slowT = Math.max(o.slowT, slow); if (freeze && !o.boss) o.stun = Math.max(o.stun, 1); hurt(o, dmg); };
           hit(tgt);
           const splash = [0, 1.4, 2][L('cannon')];
           if (splash) for (const o of g.ch) if (o !== tgt && !o.dead && Math.hypot(o.x - tgt.x, o.y - tgt.y) < splash) hit(o);
           sfx(kind === 'cannon' ? 'boom' : kind === 'frost' ? 'freeze' : 'shot', cx, cy);
         }
+      }
+    } else if (B.kind === 'look' && B.br && !B.ruin) {
+      const lv = B.lv || 1, cx = B.x + 1, cy = B.y + 1;
+      B.cd = (B.cd || 0) - dt;
+      if (B.br === 'snipe' && B.cd <= 0) {
+        // the sniper: a slow, long shot at the toughest muncher in range
+        let tgt = null, best = -1;
+        for (const c of g.ch) { if (c.dead) continue; const d = Math.hypot(c.x - cx, c.y - cy); if (d <= SNIPE.range[lv] && c.hp > best) { best = c.hp; tgt = c; } }
+        if (tgt) {
+          const d = Math.hypot(tgt.x - cx, tgt.y - cy);
+          B.cd = SNIPE.cd[lv]; B.ang = Math.atan2(tgt.y - cy, tgt.x - cx); B.recoil = 0.15;
+          g.shots.push({ x1: cx, y1: cy - 0.6, x2: tgt.x, y2: tgt.y, t: 0.16 });
+          g.proj.push({ x1: cx, y1: cy - 0.6, x2: tgt.x, y2: tgt.y, t: 0, d: 0.05 + d * 0.012, kind: 'snipe' });
+          hurt(tgt, Math.max(4, herdHp() * SNIPE.hit[lv]));
+          sfx('boom', cx, cy);
+        } else B.cd = 0.4;
+      } else if (B.br === 'spot' && lv >= 3 && B.cd <= 0) {
+        // the signal tower's flare: slows everything near it
+        let any = false;
+        for (const c of g.ch) if (!c.dead && Math.hypot(c.x - cx, c.y - cy) <= SPOT_R[lv]) { c.slowT = Math.max(c.slowT, 3); any = true; }
+        if (any) { B.cd = 12; ring(cx, cy, 0.5, SPOT_R[lv], 'frost'); sfx('freeze', cx, cy); } else B.cd = 1;
       }
     } else if (B.kind === 'mine') {
       // mines fill up; walk next to them to collect
@@ -1543,7 +1622,7 @@ function step(dt) {
           continue;
         }
       }
-      if (B.store >= 1 && near < 2.4) { const amt = Math.floor(B.store); B.store -= amt; g.gold += amt; floatText(B.x + 1, B.y + 0.2, `+${amt}`, 'gold'); sfx('coin', B.x + 1, B.y + 1); }
+      if (B.store >= 1 && near < grab) { const amt = Math.floor(B.store); B.store -= amt; g.gold += amt; floatText(B.x + 1, B.y + 0.2, `+${amt}`, 'gold'); sfx('coin', B.x + 1, B.y + 1); }
     } else if (B.kind === 'scare') {
       B.cd -= dt;
       if (B.cd <= 0) {
@@ -1802,7 +1881,7 @@ function checkHits() {
 function endRun(won) {
   const g = G; if (g.over) return;
   g.over = won ? 'won' : 'caught'; g.endT = Math.min(g.t, g.round);
-  ui.hover = null; ui.joy = null; ui.joyPtr = null; ui.buildPtr = null; ui.pad = null; ui.padPtr = null;
+  ui.hover = null; ui.joy = null; ui.joyPtr = null; ui.buildPtr = null; ui.pad = null; ui.padPtr = null; if (ui.fork) closeFork();
   ui.endTimer = won ? 0.4 : 0.9;
   sfx(won ? 'win' : 'lose');
   recEnd(won);
@@ -1821,7 +1900,7 @@ const ROW_KEYS = ['t', 'wave', 'lvl', 'gold', 'spent', 'hearts', 'alive', 'kills
 function recStart(g) {
   if (REC.doc && !REC.doc.end) { REC.doc.end = { result: 'quit', t: Math.round(REC.lastT || 0) }; recSave(); }
   REC.id = `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
-  const c = {}; for (const k of ['map', 'round', 'reach', 'pSpeed', 'cPct', 'gold', 'wallCost', 'waveEvery', 'wallHp', 'trickle', 'monsters', 'spawn', 'fog', 'herd', 'adapt', 'researchPause', 'style']) c[k] = cfg[k];
+  const c = {}; for (const k of ['map', 'round', 'reach', 'pSpeed', 'cPct', 'gold', 'wallCost', 'waveEvery', 'wallHp', 'trickle', 'monsters', 'spawn', 'fog', 'herd', 'adapt', 'researchPause', 'touchHeart', 'style']) c[k] = cfg[k];
   REC.doc = { v: 1, started: new Date().toISOString(), seed: g.seed, cfg: c, touch: !!ui.touch, sideways: !!rot, rowKeys: ROW_KEYS, rows: [], waves: [], ev: [], snaps: [], end: null };
   g.rec = { nextRow: 0, nextSave: 60, minD: Infinity, hits: 0, lost: 0 };
 }
@@ -1906,6 +1985,7 @@ function stepFx(dt) {
     if (!pj.hit && pj.t >= pj.d) {
       pj.hit = true;
       if (pj.kind === 'cannon') { ring(pj.x2, pj.y2, 0.3, 1.9, 'boom'); puff(pj.x2, pj.y2, 'hit', 8); }
+      else if (pj.kind === 'snipe') { ring(pj.x2, pj.y2, 0.2, 1.2, 'gold'); puff(pj.x2, pj.y2, 'hit', 6); }
       else if (pj.kind === 'frost') ring(pj.x2, pj.y2, 0.2, 1.1, 'frost');
       else g.fx.push({ x: pj.x2, y: pj.y2, vx: 0, vy: -1, life: 0.2, max: 0.2, s: 0.1, col: '#b07537' });
     }
@@ -2173,14 +2253,14 @@ function hpBar(c, x, y, w, frac, S) {
 const SPR = new Map(), SPRITE_KINDS = new Set(['wall', 'scare', 'look']);
 function buildingSprite(B, s, S, K, T) {
   const crack = B.kind === 'wall' ? (B.hp < B.max * 0.33 ? 2 : B.hp < B.max * 0.66 ? 1 : 0) : 0;
-  const key = `${K}|${B.kind}|${B.lv || 1}|${B.ruin ? 1 : 0}|${T.spikes ? 1 : 0}|${crack}|${s}|${DPR}`;
+  const key = `${K}|${B.kind}|${B.lv || 1}|${B.br || ''}|${B.ruin ? 1 : 0}|${T.spikes ? 1 : 0}|${crack}|${s}|${DPR}`;
   let sp = SPR.get(key);
   if (!sp) {
     if (SPR.size > 300) SPR.clear();
     const m = Math.ceil(s * 0.25), w = s + 2 * m, cvs = document.createElement('canvas');
     cvs.width = Math.ceil(w * DPR); cvs.height = Math.ceil(w * DPR);
     const sc = cvs.getContext('2d'); sc.setTransform(DPR, 0, 0, DPR, 0, 0);
-    drawBuilding(sc, { kind: B.kind, lv: B.lv, ruin: B.ruin, id: B.id, hp: crack === 2 ? 0.3 : crack === 1 ? 0.6 : 1, max: 1, pop: 0, shake: 0, pulse: 0, ang: 0, sprite: true }, m, m, s, S, K, 0);
+    drawBuilding(sc, { kind: B.kind, lv: B.lv, br: B.br, ruin: B.ruin, id: B.id, hp: crack === 2 ? 0.3 : crack === 1 ? 0.6 : 1, max: 1, pop: 0, shake: 0, pulse: 0, ang: 0, sprite: true }, m, m, s, S, K, 0);
     sp = { cv: cvs, m, w }; SPR.set(key, sp);
   }
   return sp;
@@ -2235,10 +2315,13 @@ function drawBuilding(c, B, x, y, s, S, K, now) {
       c.strokeStyle = '#8a5a35'; c.lineWidth = Math.max(2, s * 0.06); c.lineCap = 'round';
       c.beginPath(); c.moveTo(s * 0.25, s * 0.92); c.lineTo(s * 0.35, s * 0.42); c.moveTo(s * 0.75, s * 0.92); c.lineTo(s * 0.65, s * 0.42); c.moveTo(s * 0.28, s * 0.75); c.lineTo(s * 0.72, s * 0.6); c.stroke();
       rr(c, s * 0.2, s * 0.36, s * 0.6, s * 0.14, s * 0.03); c.fillStyle = '#b07537'; c.fill(); inkStroke(c, S, ow * 0.8);
-      c.beginPath(); c.moveTo(s * 0.14, s * 0.3); c.lineTo(s * 0.5, s * 0.06); c.lineTo(s * 0.86, s * 0.3); c.closePath(); c.fillStyle = '#d9534f'; c.fill(); inkStroke(c, S, ow * 0.8);
+      c.beginPath(); c.moveTo(s * 0.14, s * 0.3); c.lineTo(s * 0.5, s * 0.06); c.lineTo(s * 0.86, s * 0.3); c.closePath(); c.fillStyle = B.br === 'spot' ? '#3f8fd9' : B.br === 'snipe' ? '#5b6170' : '#d9534f'; c.fill(); inkStroke(c, S, ow * 0.8);
+      if (B.br === 'spot') { c.beginPath(); c.arc(s * 0.5, s * 0.43, s * 0.07, 0, 7); c.fillStyle = '#ffd23f'; c.fill(); inkStroke(c, S, ow * 0.6); }
+      if (B.br === 'snipe') { c.strokeStyle = S.ink || '#2b2340'; c.lineWidth = Math.max(1.5, s * 0.04); c.beginPath(); c.moveTo(s * 0.12, s * 0.43); c.lineTo(s * 0.88, s * 0.43); c.stroke(); c.beginPath(); c.moveTo(s * 0.88, s * 0.43); c.lineTo(s * 0.8, s * 0.38); c.moveTo(s * 0.88, s * 0.43); c.lineTo(s * 0.8, s * 0.48); c.stroke(); }
+      if ((B.lv || 1) >= 3) { c.fillStyle = '#ffd23f'; c.beginPath(); c.arc(s * 0.5, s * 0.17, s * 0.05, 0, 7); c.fill(); }
       c.strokeStyle = S.ink; c.lineWidth = Math.max(1, s * 0.02); c.beginPath(); c.moveTo(s * 0.5, s * 0.06); c.lineTo(s * 0.5, -s * 0.06); c.stroke();
       c.beginPath(); c.moveTo(s * 0.5, -s * 0.06); c.lineTo(s * 0.66, -s * 0.02); c.lineTo(s * 0.5, s * 0.02); c.closePath(); c.fillStyle = '#ffd23f'; c.fill();
-    } else { c.fillStyle = '#5a7d9a'; c.fillRect(1, 1, s - 2, s - 2); c.fillStyle = '#fff'; c.font = `700 ${s * 0.45}px ${S.font}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('L', s / 2, s / 2 + 1); }
+    } else { c.fillStyle = B.br === 'spot' ? '#3f8fd9' : B.br === 'snipe' ? '#5b6170' : '#5a7d9a'; c.fillRect(1, 1, s - 2, s - 2); c.fillStyle = '#fff'; c.font = `700 ${s * 0.45}px ${S.font}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(B.br === 'spot' ? 'Sp' : B.br === 'snipe' ? 'Sn' : 'L', s / 2, s / 2 + 1); }
   } else if (B.kind === 'wall') {
     if (S.toon) {
       const i = s * 0.05;
@@ -2738,6 +2821,9 @@ function draw(now) {
   for (const B of g.bld.values()) { const x = X(B.x), y = Y(B.y); if (inView(x, y, 2 * ts)) { if (B.kind === 'mud') drawBuilding(cx, B, x, y, 2 * ts, S, K, now); else shown.push(B); } }
   for (const B of shown) drawBuilding(cx, B, X(B.x), Y(B.y), 2 * ts, S, K, now);
   drawPOIs(S, K, now, 'objects');
+  if (ui.tool === 'tower' || ui.tool === 'look') for (const B of g.bld.values()) if (B.kind === 'look' && B.br === 'spot' && !B.ruin) {
+    cx.beginPath(); cx.arc(X(B.x + 1), Y(B.y + 1), (SPOT_R[B.lv || 1] + 1) * ts, 0, 7); cx.setLineDash([ts * 0.2, ts * 0.2]); cx.lineWidth = Math.max(1.5, ts * 0.06); cx.strokeStyle = '#3f8fd9'; cx.globalAlpha = 0.7; cx.stroke(); cx.setLineDash([]); cx.globalAlpha = 1;
+  }
   if (gh && gh.up) upMark(gh.B, gh.u, gh.ok, S, 1);
   if (gh && !gh.raze && !gh.up) {
     const x = X(gh.bx), y = Y(gh.by), s = 2 * ts, col = gh.ok ? S.ok : S.bad;
@@ -2778,6 +2864,7 @@ function draw(now) {
     cx.globalAlpha = 1;
   }
 
+  if (ui.slowmo && !reduced) { cx.fillStyle = 'rgba(60,90,140,0.10)'; cx.fillRect(0, 0, VW, VH); }
   // units, back to front
   const units = []; for (const ch of g.ch) { const sz = ((ch.size || 1) + (ch.boss ? 2 : 0)) * ts; if (inView(X(ch.x) - sz, Y(ch.y) - sz, 2 * sz)) units.push([ch.y + 0.9, ch]); } units.push([g.p.y + 0.4, null]);
   units.sort((a, b) => a[0] - b[0]);
@@ -2846,6 +2933,7 @@ function draw(now) {
   if (S.toon) for (const pj of g.proj) {
     if (pj.t >= pj.d) continue;
     const k = pj.t / pj.d, px = X(pj.x1 + (pj.x2 - pj.x1) * k), py = Y(pj.y1 + (pj.y2 - pj.y1) * k) - Math.sin(k * Math.PI) * ts * 0.45;
+    if (pj.kind === 'snipe') { const a = Math.atan2(pj.y2 - pj.y1, pj.x2 - pj.x1), qx = X(pj.x1 + (pj.x2 - pj.x1) * k), qy = Y(pj.y1 + (pj.y2 - pj.y1) * k); cx.save(); cx.translate(qx, qy); cx.rotate(a); cx.fillStyle = '#ffe9a8'; cx.fillRect(-ts * 0.45, -ts * 0.05, ts * 0.45, ts * 0.1); cx.fillStyle = S.ink || '#2b2340'; cx.fillRect(-ts * 0.05, -ts * 0.07, ts * 0.12, ts * 0.14); cx.restore(); continue; }
     if (pj.kind === 'cannon') { cx.beginPath(); cx.arc(px, py, ts * 0.2, 0, 7); cx.fillStyle = '#2f2a44'; cx.fill(); inkStroke(cx, S, 1.5); cx.beginPath(); cx.arc(px - ts * 0.06, py - ts * 0.06, ts * 0.06, 0, 7); cx.fillStyle = 'rgba(255,255,255,.6)'; cx.fill(); }
     else if (pj.kind === 'frost') { star(cx, px, py, ts * 0.2, '#ffffff'); cx.beginPath(); cx.arc(px, py, ts * 0.07, 0, 7); cx.fillStyle = S.frost; cx.fill(); }
     else { cx.save(); cx.translate(px, py); cx.rotate(Math.atan2(pj.y2 - pj.y1, pj.x2 - pj.x1)); cx.beginPath(); cx.ellipse(0, 0, ts * 0.13, ts * 0.1, 0, 0, 7); cx.fillStyle = '#b07537'; cx.fill(); inkStroke(cx, S, 1.2); cx.beginPath(); cx.ellipse(-ts * 0.07, 0, ts * 0.06, ts * 0.11, 0, 0, 7); cx.fillStyle = '#6b4423'; cx.fill(); cx.restore(); }
@@ -3275,9 +3363,10 @@ const CHOICES = [
   { k: 'music', label: 'Music', opts: [[true, 'On'], [false, 'Off']] },
   { k: 'tune', label: 'Music track', opts: [['meadow', 'Meadow Hop'], ['sneaky', 'Sneaky Steps'], ['chip', 'Chip Rush'], ['lofi', 'Lazy Lo-fi']] },
   { k: 'tips', label: 'Tips', opts: [[true, 'On'], [false, 'Off']] },
+  { k: 'touchHeart', label: 'Extra heart on touch screens', opts: [[true, 'On'], [false, 'Off']] },
   { k: 'phone', label: 'Phone held upright', chips: true, opts: [['left', 'Sideways, top to the left'], ['right', 'Sideways, top to the right'], ['upright', 'Keep it upright']] },
 ];
-const SITE_CHOICES = ['round', 'herd', 'researchPause', 'sound', 'music', 'tune', 'tips', 'phone'];
+const SITE_CHOICES = ['round', 'herd', 'researchPause', 'touchHeart', 'sound', 'music', 'tune', 'tips', 'phone'];
 function buildTune() {
   const f = $('#tuneForm'); f.innerHTML = '';
   for (const t of SITE ? [] : TUNE) {
@@ -3338,18 +3427,30 @@ function dropSpot() {
     }
     return best || { x: p.x, y: p.y, ok: false };
   }
+  // behind you first; for blockers, prefer the spot that cuts off the closest muncher within 9 tiles
+  const blocker = ui.tool === 'wall' || ui.tool === 'mud' || ui.tool === 'scare';
+  let thr = null, td = 9;
+  if (blocker) for (const c of g.ch) { if (c.dead) continue; const d = Math.hypot(c.x - p.x, c.y - p.y); if (d < td) { td = d; thr = c; } }
+  const cands = [];
+  for (const d of [1.6, 2.4]) for (const s of [0, 0.9, -0.9, 1.8, -1.8]) cands.push([p.x - fx * d - fy * s, p.y - fy * d + fx * s]);
+  if (thr) { const tx = (thr.x - p.x) / (td || 1), ty = (thr.y - p.y) / (td || 1); for (const d of [1.6, 2.4]) for (const s of [0, 0.9, -0.9]) cands.push([p.x + tx * d - ty * s, p.y + ty * d + tx * s]); }
   const seen = new Set();
-  let first = null, push = null;
-  for (const d of [1.6, 2.4]) for (const s of [0, 0.9, -0.9, 1.8, -1.8]) {
-    const { bx, by } = footprintAt(p.x - fx * d - fy * s, p.y - fy * d + fx * s), key = by * g.W + bx;
-    if (seen.has(key)) continue; seen.add(key);
+  let first = null, best = null, bs = Infinity;
+  cands.forEach(([wx, wy], i) => {
+    const { bx, by } = footprintAt(wx, wy), key = by * g.W + bx;
+    if (seen.has(key)) return; seen.add(key);
     const r = checkBuild(ui.tool, bx, by), spot = { x: bx + 1, y: by + 1, ok: r === 'ok' };
     if (!first) first = spot;
-    if (r !== 'ok') continue;
-    if (!boxHit(p.x, p.y, PH, bx + 1, by + 1, 1)) return spot;
-    if (!push) push = spot;
-  }
-  return push || first;
+    if (r !== 'ok') return;
+    let sc = i * 0.04 + (boxHit(p.x, p.y, PH, bx + 1, by + 1, 1) ? 2 : 0);
+    if (thr) sc += segDist(bx + 1, by + 1, p.x, p.y, thr.x, thr.y);
+    if (sc < bs) { bs = sc; best = spot; }
+  });
+  return best || first;
+}
+function segDist(px, py, ax, ay, bx, by) {
+  const vx = bx - ax, vy = by - ay, l2 = vx * vx + vy * vy || 1, k = clamp(((px - ax) * vx + (py - ay) * vy) / l2, 0, 1);
+  return Math.hypot(px - ax - vx * k, py - ay - vy * k);
 }
 function padTarget() {
   const g = G, P = ui.pad;
@@ -3367,11 +3468,13 @@ function padTarget() {
 }
 function endPadNow() { ui.pad = null; ui.padPtr = null; ui.hover = null; $('#pad').classList.remove('held', 'cancel'); }
 const padEl = $('#pad');
+document.querySelectorAll('#fork button[data-br]').forEach(b => b.addEventListener('click', () => chooseFork(b.dataset.br)));
+$('#forkCancel').addEventListener('click', closeFork);
 padEl.addEventListener('pointerdown', e => {
   audioStart(); e.preventDefault(); e.stopPropagation();
   if (!G || G.over || !ui.started || ui.paused || ui.padPtr != null || (ui.research && cfg.researchPause)) return;
   const l = pt(e);
-  ui.padPtr = e.pointerId; ui.pad = { ox: l.x, oy: l.y, x: l.x, y: l.y, aim: false };
+  ui.padPtr = e.pointerId; ui.pad = { ox: l.x, oy: l.y, x: l.x, y: l.y, aim: false }; ui.aimT = 0; tip('aimslow');
   padEl.classList.add('held');
   try { padEl.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
 });
@@ -3435,6 +3538,7 @@ addEventListener('keydown', e => {
   const k = e.code;
   if (MOVE[k]) { e.preventDefault(); keys.add(k); return; }
   if (e.repeat) return;
+  if (ui.fork) { if (k === 'Digit1') chooseFork('spot'); else if (k === 'Digit2') chooseFork('snipe'); else if (k === 'Escape') closeFork(); e.preventDefault(); return; }
   if (ui.research && ['Digit1', 'Digit2', 'Digit3'].includes(k)) { const id = G && G.offer && G.offer[Number(k.slice(5)) - 1]; if (id) pickCard(id); }
   else if (k === 'KeyE' && ui.started && G && !G.over && !ui.paused) toggleResearch();
   else if (k === 'Escape' && ui.research) closeResearch();
@@ -3551,7 +3655,10 @@ function frame(now) {
   }
   const f0 = performance.now();
   const running = G && ui.started && !ui.paused && !G.over && !(ui.research && cfg.researchPause);
-  const scale = running && G.slow > 0 ? 0.35 : 1;
+  const holding = ui.pad || ui.buildPtr != null;
+  if (holding) ui.aimT += dt; else ui.aimT = 0;
+  ui.slowmo = running && ((ui.touch && holding && ui.aimT < AIM_SLOW) || !!ui.fork);
+  const scale = running && (G.slow > 0 || ui.slowmo) ? 0.35 : 1;
   if (running && G.slow > 0) G.slow -= dt;
   // one sim step per displayed frame (split if a frame runs long), so motion is smooth at 60, 120 or 144 Hz
   if (running) { let left = dt * scale; while (left > 1e-6) { const h = Math.min(DT, left); step(h); left -= h; } }
@@ -3589,7 +3696,7 @@ requestAnimationFrame(frame);
 
 // test hooks
 const fitAll = () => { const fw = VW - 32, fh = VH - 32; ts = Math.min(fw / G.W, fh / G.H); view.mode = 'fit'; view.fl = 16; view.ft = 16; view.fr = VW - 16; view.fb = VH - 16; ox = 16 + (fw - G.W * ts) / 2; oy = 16 + (fh - G.H * ts) / 2; boardKey = ''; };
-window.__chase = { warm, FEED_R, get bc() { return boardCache; }, get tsv() { return { ts, DPR, VW, VH, ox, oy }; }, draw, updateHud, get frameStats() { return FS; }, get SAFE() { return SAFE; }, FB, fbSend, updateCosts, planWave, fitAll, REC, recSave, herdHp, waveDone, upInfo, upgradeAt, buyPick, tossWell, scrape, wreckStep, maxHp, levelUp, ORE_TILE, pt, applyOrient, padTarget, dropSpot, setTouch, placeControls, get rot() { return rot; }, CARDS, pickCard, applyCard, makeOffer, canPick, startEvent, spawnBoss, waveKinds, updatePalette, TUNES, musicTick, researchReady, openResearch, closeResearch, KINDS, AU, sfx, tipQ, offView, view, pushSpot, covered, MAPS, gapTiles, footprintAt, get G() { return G; }, cfg, newGame, step, place, refreshFields, startRun, restart, setTool, tryBuild, razeAt, checkBuild, ui, layout, setStyle, destroy, spawn, endRun };
+window.__chase = { openFork, chooseFork, closeFork, spotBoost, SPOT_R, SNIPE, dropSpot, segDist, get frameScale() { return ui.slowmo; }, warm, FEED_R, get bc() { return boardCache; }, get tsv() { return { ts, DPR, VW, VH, ox, oy }; }, draw, updateHud, get frameStats() { return FS; }, get SAFE() { return SAFE; }, FB, fbSend, updateCosts, planWave, fitAll, REC, recSave, herdHp, waveDone, upInfo, upgradeAt, buyPick, tossWell, scrape, wreckStep, maxHp, levelUp, ORE_TILE, pt, applyOrient, padTarget, dropSpot, setTouch, placeControls, get rot() { return rot; }, CARDS, pickCard, applyCard, makeOffer, canPick, startEvent, spawnBoss, waveKinds, updatePalette, TUNES, musicTick, researchReady, openResearch, closeResearch, KINDS, AU, sfx, tipQ, offView, view, pushSpot, covered, MAPS, gapTiles, footprintAt, get G() { return G; }, cfg, newGame, step, place, refreshFields, startRun, restart, setTool, tryBuild, razeAt, checkBuild, ui, layout, setStyle, destroy, spawn, endRun };
 })();
 </script>
 </body>
