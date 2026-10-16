@@ -145,6 +145,7 @@ body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font-f
 .tool b { font-family: var(--font-d); font-weight: var(--dw); font-size: 13px; line-height: 1.1; }
 .tool em { font-style: normal; font-weight: 800; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .tool kbd { position: absolute; top: 3px; left: 6px; font: 800 10px var(--font-b); color: var(--muted); }
+.gp-focus, button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .tool[aria-pressed="true"] { background: var(--sel); box-shadow: 0 0 0 3px var(--accent), var(--lift); }
 .tool.poor em { color: var(--bad); }
 .tool:active { transform: translateY(2px); }
@@ -153,6 +154,8 @@ body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font-f
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 
 /* cards */
+#endBest { margin: 0; font-weight: 700; }
+#endBest.best { color: var(--good); }
 .ov { position: absolute; inset: 0; display: grid; place-items: start center; padding: 16px; background: var(--scrim); overflow: auto; }
 .card { width: min(480px, 100%); background: var(--panel); border: var(--bw) solid var(--line); border-radius: calc(var(--radius) + 6px); box-shadow: var(--lift-lg); padding: 22px; display: flex; flex-direction: column; gap: 14px; margin: auto; }
 .col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
@@ -176,6 +179,8 @@ body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font-f
 .field { display: grid; gap: 6px; }
 .field > span { font-weight: 800; font-size: 13px; color: var(--muted); }
 .field .seg { justify-self: start; }
+.seg em.new { font-style: normal; font-size: 10px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; background: #ff7a45; color: #fff; border-radius: 999px; padding: 1px 6px; margin-left: 4px; vertical-align: 1px; }
+.seg label:has(input:checked) em.new { background: #ffffff; color: #e2562a; }
 .seg.chips { border: none; background: none; overflow: visible; flex-wrap: wrap; gap: 6px; }
 .seg.chips label { border: var(--bw) solid var(--line); border-radius: var(--pill); background: var(--panel); }
 .seg.chips label + label { border-left: var(--bw) solid var(--line); }
@@ -217,6 +222,11 @@ body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font-f
 .cardup small { font-size: 12.5px; font-weight: 600; color: var(--muted); line-height: 1.3; }
 .cardup.combo { background: var(--accent); color: var(--on-accent); }
 .cardup.combo small { color: inherit; opacity: .9; }
+.cardup.charm { box-shadow: 0 0 0 3px #d9a400, var(--lift); }
+.cardup small.evo { color: #7b4fd6; font-weight: 800; }
+:root[data-style="neon"] .cardup small.evo { color: #c9a8ff; }
+.rowned span.charm { display: inline-flex; align-items: center; gap: 4px; }
+.rowned span.charm canvas { width: 18px; height: 18px; }
 .cardup.unlock { box-shadow: 0 0 0 3px var(--good), var(--lift); }
 .cardup kbd { position: absolute; top: 6px; left: 8px; font: 800 10px var(--font-b); opacity: .6; }
 .pips { display: flex; gap: 4px; }
@@ -301,6 +311,11 @@ body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font-f
 #pad.poor em { color: var(--bad); }
 #pad.held { transform: scale(.93); background: var(--sel); }
 #pad.cancel { opacity: .55; box-shadow: 0 0 0 4px var(--muted), var(--lift); }
+#coach { position: absolute; left: 50%; top: 92px; transform: translateX(-50%); z-index: 25; width: min(440px, calc(100% - 32px)); display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; align-items: center;
+  background: var(--panel); color: var(--ink); border: var(--bw) solid var(--line); border-radius: var(--radius); box-shadow: var(--lift-lg); padding: 12px 14px; font: 600 15px/1.35 var(--font-b); pointer-events: auto; }
+#coach b { font-family: var(--font-d); font-weight: var(--dw); font-size: 18px; color: var(--on-accent); background: var(--accent); border-radius: var(--pill); padding: 4px 12px; }
+#coach button { background: none; border: 0; color: var(--muted); font: 700 13px var(--font-b); cursor: pointer; padding: 8px; min-height: 40px; }
+@media (prefers-reduced-motion: no-preference) { #coach { animation: coachIn .35s ease-out; } @keyframes coachIn { from { opacity: 0; transform: translate(-50%, -8px); } } }
 #fork { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 30; width: min(560px, calc(100% - 32px)); background: var(--panel); color: var(--ink);
   border: var(--bw) solid var(--line); border-radius: var(--radius); box-shadow: var(--lift-lg); padding: 14px; display: grid; gap: 10px; font-family: var(--font-b); }
 #fork > b { font-family: var(--font-d); font-weight: var(--dw); font-size: 18px; text-align: center; }
@@ -391,6 +406,7 @@ body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font-f
     <button class="tool" type="button" data-tool="up" aria-pressed="false" aria-label="Fix and upgrade"><kbd>U</kbd><canvas data-icon="up"></canvas><b>Upgrade</b><em>fix · up</em></button>
     <button class="tool" type="button" data-tool="raze" aria-pressed="false" aria-label="Knock down"><kbd>4</kbd><canvas data-icon="raze"></canvas><b>Knock</b><em>down</em></button>
   </nav>
+  <div id="coach" hidden role="status"><b id="coachStep">Run</b><span id="coachText"></span><button type="button" id="coachSkip">Skip</button></div>
   <div id="pad" role="button" aria-label="Build wall"><canvas data-icon="wall"></canvas><em>3</em></div>
   <div id="fork" role="dialog" aria-label="Upgrade the lookout" hidden>
     <b>Upgrade the lookout · <span id="forkCost">20</span> gold</b>
@@ -431,8 +447,8 @@ body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font-f
       </div>
       <div class="col">
       <div class="keys">
-        <div class="k-keys"><h3>Keyboard</h3><p>WASD or arrows to move. Click near you to build. 1, 2, 3 pick; U fixes and upgrades; 4 or right-click knocks down. F tosses gold in a well. P pauses, M mutes.</p></div>
-        <div class="k-touch"><h3>Touch</h3><p>Left thumb: drag on the left side to run. Right thumb: tap the big round button to drop a wall right behind you, or drag it to aim. The small buttons above it pick what you build.</p></div>
+        <div class="k-keys"><h3>Keyboard</h3><p>WASD or arrows to move. Click near you to build. 1, 2, 3 pick; stand by a building and hold Space (or click it) to fix or upgrade it; 4 or right-click knocks down. F tosses gold in a well. P pauses, M mutes.</p></div>
+        <div class="k-touch"><h3>Touch</h3><p>Left thumb: drag on the left side to run. Right thumb: tap the big round button to drop a wall right behind you, or drag it to aim. The small buttons above it pick what you build. Tap the price tag over a building next to you to fix or upgrade it.</p></div>
       </div>
       <p class="note portrait-tip">Turn your phone sideways for a bigger board.</p>
       <p class="note side-tip" id="sideTip"></p>
@@ -450,6 +466,12 @@ body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font-f
           <label><input type="radio" name="style" id="st-winter" value="winter">Winter</label>
           <label><input type="radio" name="style" id="st-neon" value="neon">Neon</label>
           <label><input type="radio" name="style" id="st-grey" value="grey">Grey box</label>
+        </div>
+      </div>
+      <div class="field"><span>Map</span>
+        <div class="seg chips" id="segBiome" role="radiogroup" aria-label="Map">
+          <label><input type="radio" name="biome" id="bi-winter" value="winter">Winter</label>
+          <label><input type="radio" name="biome" id="bi-forest" value="forest">Forest <em class="new">New</em></label>
         </div>
       </div>
       <div class="field"><span>Music</span>
@@ -487,6 +509,7 @@ body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font-f
       <p class="eyebrow" id="endEyebrow">Run over</p>
       <h1 id="endTitle">You made it!</h1>
       <span class="badge" id="endBadge" hidden>Close call</span>
+      <p class="note" id="endBest"></p>
       <p class="note" id="recNote"></p>
       <div class="stats">
         <div><small>Survived</small><b id="sTime">0:00</b></div>
@@ -537,7 +560,7 @@ const SITE = window.STAMPEDE || null;
 if (SITE) root.classList.add('site');
 
 // ---------------------------------------------------------------- settings
-const DEF = { reach: 3, pSpeed: 5, cPct: 108, gold: 50, wallCost: 3, waveEvery: 20, round: 1200, wallHp: 40, grace: 4, stunHit: 3, spawn: 'edges', map: 'huge', fog: true, vision: 7, trickle: 1.5, paths: true, sound: true, music: true, tips: true, researchPause: true, touchHeart: true, rpKill: 3, monsters: 'mixed', tune: 'meadow', style: 'cartoon', phone: 'left', herd: 'normal', adapt: true };
+const DEF = { reach: 3, pSpeed: 5, cPct: 108, gold: 50, wallCost: 3, waveEvery: 20, round: 1200, wallHp: 40, grace: 4, stunHit: 3, spawn: 'edges', map: 'huge', fog: true, vision: 7, trickle: 1.5, paths: true, sound: true, music: true, tips: true, researchPause: true, touchHeart: true, rpKill: 3, monsters: 'mixed', tune: 'meadow', style: 'cartoon', biome: 'winter', phone: 'left', herd: 'normal', adapt: true };
 const store = {
   get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* storage off */ } },
@@ -603,10 +626,26 @@ const CARDS = {
   goldrush: { name: 'Gold rush', icon: 'mine', max: 1, combo: ['deep', 'bounty'], text: 'Combo! Every kill pays 5 extra gold and research.' },
 };
 const L = id => (G && G.lv[id]) || 0;
+// Charms: lucky finds from chests. Hold up to 4 a run. The first four each evolve a max-level building.
+const CHARMS = {
+  globe: { name: 'Snow globe', col: '#bfe6ff', text: 'Towers shoot 15% faster.', evo: 'tower', evoText: 'Evolves Tower III into a Blizzard spire that freezes everything near it every few seconds.' },
+  seed: { name: 'Bramble seed', col: '#c3ef9f', text: 'Walls are 25% tougher.', evo: 'wall', evoText: 'Evolves an Iron wall into a Bramble wall: thorns hurt and slow chewers, and it grows back.' },
+  pick: { name: 'Golden pick', col: '#ffe08a', text: 'Mines dig 25% faster.', evo: 'mine', evoText: 'Evolves a Deep shaft into a Motherlode that digs twice as fast and never runs dry.' },
+  glass: { name: 'Spyglass', col: '#d9ecff', text: 'See 2 tiles further; lookouts see 3 further.', evo: 'look', evoText: 'Evolves a level-3 lookout into a Sky tower: Spotter and Sniper in one.' },
+  clover: { name: 'Lucky clover', col: '#d8f5c8', text: 'Every 5th kill drops 5 extra gold.' },
+  locket: { name: 'Heart locket', col: '#ffd6df', text: 'Once a run, the hit that would catch you leaves you on 1 heart instead.' },
+  piggy: { name: 'Piggy bank', col: '#ffe3ec', text: 'Every 30 s, earn 5% interest on your gold (up to 15).' },
+  magnet: { name: 'Magnet', col: '#ffe1dc', text: 'Collect from mines and reload towers 1.5 tiles further away.' },
+};
+const CHARM_MAX = 4;
+const charmCap = g => Math.min(CHARM_MAX, actAt(g.t) + 1);
+const HAS = id => !!(G && G.charms && G.charms.includes(id));
+const EVO = { tower: { charm: 'globe', name: 'Blizzard spire', cost: 120, col: '#7fd0ff' }, wall: { charm: 'seed', name: 'Bramble wall', cost: 40, col: '#4fae48' }, mine: { charm: 'pick', name: 'Motherlode', cost: 90, col: '#ffcf3a' }, look: { charm: 'glass', name: 'Sky tower', cost: 60, col: '#b07cff' } };
+const wallMul = () => Math.pow(1.6, L('stone')) * (HAS('seed') ? 1.25 : 1);
 const BOSSES = [{ name: 'Chomper King', kind: 'grazer', hp: 80 }, { name: 'Rampager', kind: 'charger', hp: 130 }, { name: 'Iron Belly', kind: 'tank', hp: 220 }];
 const SHRINES = { speed: { name: 'Speed', col: '#5ee8ff', text: 'You run faster for 25 seconds.' }, gold: { name: 'Gold', col: '#ffd84d', text: 'Double gold for 25 seconds.' }, shield: { name: 'Shield', col: '#ff9ec7', text: "Munchers can't hurt you for 8 seconds." }, sight: { name: 'Sight', col: '#b4a0ff', text: 'You see much further for 25 seconds.' } };
 const ammoCap = B => 30 + 20 * L('mag') + (B ? TOWER_LV.ammo[(B.lv || 1) - 1] : 0);
-const mineCap = B => 12 * (B.vein && B.vein.left > 0 ? 2 : 1) * Math.pow(1.75, L('pockets')) * MINE_LV.cart[(B.lv || 1) - 1];
+const mineCap = B => 12 * (B.vein && B.vein.left > 0 ? 2 : 1) * Math.pow(1.75, L('pockets')) * MINE_LV.cart[(B.lv || 1) - 1] * (B.evo ? 1.5 : 1);
 const researchCost = n => 14 + 7 * n;
 const DT = 1 / 60;
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -643,7 +682,8 @@ const STY = {
     den: '#a9a9a9', fogNew: '#9a9a9a', fogOld: '#4d4d4d', fogOldA: 0.45, fogNoise: 0, panel: '#f3f3f3', line: '#9c9c9c', font: '"IBM Plex Mono", monospace', fw: '700' },
 };
 if (!STY[cfg.style]) cfg.style = 'cartoon';
-if (SITE) cfg.style = 'winter';
+if (!['winter', 'forest'].includes(cfg.biome)) cfg.biome = 'winter';
+if (SITE) cfg.style = cfg.biome === 'forest' ? 'cartoon' : 'winter';
 const ORDER = ['cartoon', 'spooky', 'winter', 'neon', 'grey'];
 
 // ---------------------------------------------------------------- helpers
@@ -816,13 +856,20 @@ const TIPS = {
   charger: 'Chargers wind up, then dash in a straight line. Turns in your maze make them bonk.',
   pack: 'Pack munchers are small enough to use your gaps. Towers are the answer.',
   tank: 'Tanks are slow but chew fast and take a beating. Stone walls and towers help.',
-  prickle: 'Prickles scrape every building they brush past. Keep walls patched with Fix & upgrade, or line routes with spiked walls.',
+  prickle: 'Prickles scrape every building they brush past. Stand by a scraped wall to patch it, or line routes with spiked walls.',
   wrecker: 'Wreckers smash buildings near their path on purpose. A red ! shows what they picked. Towers and iron walls slow them down.',
   up: 'Fix & upgrade: tap a building near you. Damaged ones get patched; healthy ones go up a level.',
+  get holdup() { return ui.touch ? 'Stand next to one of your buildings and tap its price tag (or the building) to fix or upgrade it.' : GP.seen ? 'Stand next to one of your buildings and hold X to fix or upgrade it.' : 'Stand next to one of your buildings and hold Space (or click it) to fix or upgrade it.'; },
   dry: 'Mines cave in once they are dug out, and the ground there is spent. Build the next one on fresh grass, or on a gold vein.',
   towercost: 'Each tower or mine costs 5 more for every one you already have. Upgrading is often the better deal.',
   mineeat: 'Wreckers love gold: they go after mines first. Mines are soft, so wall them in.',
-  ambush: 'Dirt mounds mean munchers are about to burrow up right next to you. Get behind a wall!',
+  get ambush() { return G && G.forest ? 'Shaking bushes mean munchers are about to jump out of the trees right next to you. Get behind a wall!' : 'Dirt mounds mean munchers are about to burrow up right next to you. Get behind a wall!'; },
+  forest: 'The forest: trees block you and the munchers alike, and the creek can only be crossed at its shallow fords. Knock down fells trees for a little gold.',
+  woods: "Deep in the trees you can't see as far. Lookouts see over the treetops.",
+  fell: 'Felling clears a 2 × 2 patch, so munchers can use your shortcut too.',
+  charm: 'Charms are lucky finds that last the whole run. You get one charm slot per act, up to 4. Some can evolve a building at its top level.',
+  charmcap: 'This chest held a free upgrade instead of a charm: your charm slots are full for this act. A new slot opens each act, and boss chests always hold a charm.',
+  get evo() { return `Evolution ready! Stand by a top-level building that matches your charm: its price tag shows the evolution. ${ui.touch ? 'Tap the tag' : GP.seen ? 'Hold X' : 'Hold Space'} to evolve it.`; },
   rich: 'Lots of gold? Upgrade walls to stone and iron, level up towers and mines, or buy upgrade cards in the Upgrades panel.',
   well: 'A wishing well! Toss in some gold and see what happens. The price goes up each time.',
 };
@@ -867,6 +914,8 @@ function newGame(seed) {
     pois: [], mud: new Uint8Array(W * H), mudmap: new Int32Array(W * H).fill(-1), act: -1, evDone: [], finale: false, finT: 0,
     rushT: 0, nightT: 0, buffs: { speed: 0, gold: 0, sight: 0 }, intro: {}, bossesKilled: 0, bossAt: -1,
     snormal: new Float64Array(W * H), schew: new Float64Array(W * H), water: new Uint8Array(W * H), flowers: [], clouds: [], flies: [],
+    tree: new Uint8Array(W * H), ford: new Uint8Array(W * H), forest: cfg.biome === 'forest', felled: 0,
+    charms: [], charmPick: 0, offerType: null, evos: 0, cloverN: 0, piggyT: 0, locketUsed: false,
     ore: new Float32Array(W * H).fill(ORE_TILE), dugAny: false, bought: 0, wellPrice: 50, lastFree: null, nearWell: null, upgraded: 0,
     p: { x: W / 2 + 0.5, y: H / 2 + 0.5, fx: 1, fy: 0, moving: false, walk: 0, stepD: 0 },
   };
@@ -878,7 +927,7 @@ function newGame(seed) {
   }
   G = g;
   COST.wall = Math.max(1, cfg.wallCost);
-  genRocks(g);
+  if (g.forest) genForest(g); else genRocks(g);
   genPOIs(g);
   const tr = mulberry(seed ^ 0x5bd1e995);
   for (let i = 0; i < (W * H) / 5; i++) g.tufts.push([tr() * W, tr() * H, tr()]);
@@ -936,6 +985,98 @@ function genRocks(g) {
     placed++;
   }
 }
+// Forest: groves of trees (solid for everyone, like rocks) and a two-tile creek you can only cross at three shallow fords.
+function genForest(g) {
+  const { W, H, R } = g;
+  const away = (x, y, d) => Math.hypot(x + 0.5 - g.p.x, y + 0.5 - g.p.y) >= d && !nearDen(g, x, y);
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const left = R() < 0.5, fords = [0.2, 0.5, 0.8].map(f => Math.round(H * f + (R() - 0.5) * H * 0.1)), cells = [];
+    let cx0 = Math.round(W * (left ? 0.22 : 0.74) + (R() - 0.5) * W * 0.06), since = 9;
+    for (let y = 0; y < H; y++) {
+      since++;
+      if (y >= 2 && y <= H - 2 && since >= 2 && R() < 0.35) { cx0 = clamp(cx0 + (R() < 0.5 ? -1 : 1), 3, W - 5); since = 0; }
+      const ford = fords.some(f => y >= f - 1 && y <= f + 1);
+      for (const x of [cx0, cx0 + 1]) { if (ford) g.ford[y * W + x] = 1; else if (away(x, y, 5.5)) cells.push(y * W + x); }
+    }
+    for (const i of cells) { g.rock[i] = 1; g.water[i] = 1; }
+    if (connected(g) && covered(g)) break;
+    for (const i of cells) { g.rock[i] = 0; g.water[i] = 0; }
+    g.ford.fill(0);
+  }
+  // groves: blobs of 5 to 16 trees, planted one by one so no tree leaves a pocket munchers can't reach
+  const nG = Math.round(W * H / 55);
+  for (let k = 0, tries = 0; k < nG && tries < nG * 6; tries++) {
+    const x0 = 1 + ((R() * (W - 2)) | 0), y0 = 1 + ((R() * (H - 2)) | 0), i0 = y0 * W + x0;
+    if (!away(x0, y0, 6.5) || g.rock[i0] || g.ford[i0]) continue;
+    const size = 6 + ((R() * 13) | 0), cells = [[x0, y0]], set = new Set([i0]);
+    for (let t = 0; cells.length < size && t < size * 6; t++) {
+      const [bx, by] = cells[(R() * cells.length) | 0], [dx, dy] = D4[(R() * 4) | 0], nx = bx + dx, ny = by + dy, i = ny * W + nx;
+      if (nx < 1 || ny < 1 || nx > W - 2 || ny > H - 2 || set.has(i) || g.rock[i] || g.ford[i] || !away(nx, ny, 6.5)) continue;
+      cells.push([nx, ny]); set.add(i);
+    }
+    const planted = [];
+    for (const [x, y] of cells) { const i = y * W + x; g.rock[i] = 1; g.tree[i] = 1; if (coveredNear(g, x, y)) planted.push(i); else { g.rock[i] = 0; g.tree[i] = 0; } }
+    if (!planted.length) continue;
+    if (!connected(g)) { for (const i of planted) { g.rock[i] = 0; g.tree[i] = 0; } continue; }
+    k++;
+  }
+  // a few boulders
+  for (let k = 0, t = 0, n = Math.round(W * H / 220); k < n && t < n * 10; t++) {
+    const x = 1 + ((R() * (W - 2)) | 0), y = 1 + ((R() * (H - 2)) | 0), i = y * W + x;
+    if (!away(x, y, 4.5) || g.rock[i] || g.ford[i]) continue;
+    g.rock[i] = 1;
+    if (!coveredNear(g, x, y) || !connected(g)) { g.rock[i] = 0; continue; }
+    k++;
+  }
+}
+// an open tile sits inside some open 2x2; checking the 3x3 around a new blocker is enough
+function coveredAt(g, x, y) {
+  for (let ay = y - 1; ay <= y; ay++) for (let ax = x - 1; ax <= x; ax++) if (ax >= 0 && ay >= 0 && ax < g.AW && ay < g.AH && standable(g, ay * g.AW + ax)) return true;
+  return false;
+}
+function coveredNear(g, x, y) {
+  for (let yy = y - 1; yy <= y + 1; yy++) for (let xx = x - 1; xx <= x + 1; xx++) if (xx >= 0 && yy >= 0 && xx < g.W && yy < g.H && !g.rock[yy * g.W + xx] && !coveredAt(g, xx, yy)) return false;
+  return true;
+}
+// Felling: Knock down on a tree clears the 2x2 patch around it with the fewest trees, so no 1-tile pocket opens up.
+function fellWindow(g, tx, ty) {
+  let best = null;
+  for (let ay = ty - 1; ay <= ty; ay++) for (let ax = tx - 1; ax <= tx; ax++) {
+    if (ax < 0 || ay < 0 || ax + 1 >= g.W || ay + 1 >= g.H) continue;
+    let n = 0, ok = true;
+    for (let y = ay; y < ay + 2; y++) for (let x = ax; x < ax + 2; x++) { const i = y * g.W + x; if (g.tree[i]) n++; else if (g.rock[i]) ok = false; }
+    if (ok && (!best || n < best.n)) best = { ax, ay, n };
+  }
+  return best;
+}
+function fellInfo(w) {
+  const g = G, tx = w.x | 0, ty = w.y | 0;
+  if (tx < 0 || ty < 0 || tx >= g.W || ty >= g.H || !g.tree[ty * g.W + tx]) return null;
+  const win = fellWindow(g, tx, ty);
+  return { win: win || { ax: tx, ay: ty, n: 1, one: true }, ok: !!win && Math.hypot(tx + 0.5 - g.p.x, ty + 0.5 - g.p.y) <= g.reach + 0.75 };
+}
+function fellAt(w) {
+  const g = G, tx = w.x | 0, ty = w.y | 0;
+  if (Math.hypot(tx + 0.5 - g.p.x, ty + 0.5 - g.p.y) > g.reach + 0.75) { toast('Too far. Get closer to fell that tree.'); sfx('deny'); return false; }
+  const win = fellWindow(g, tx, ty);
+  if (!win) { toast('No room to fell that tree.'); sfx('deny'); return false; }
+  let n = 0;
+  for (let y = win.ay; y < win.ay + 2; y++) for (let x = win.ax; x < win.ax + 2; x++) { const i = y * g.W + x; if (g.tree[i]) { g.tree[i] = 0; g.rock[i] = 0; n++; puff(x + 0.5, y + 0.5, 'leaf', 8); } }
+  g.gold += n; g.felled += n; g.dirty = true; mmAt = -1;
+  floatText(win.ax + 1, win.ay + 0.3, `+${n} gold`, 'gold'); ring(win.ax + 1, win.ay + 1, 0.6, 2, 'dust'); sfx('raze'); g.shake = Math.max(g.shake, 0.06);
+  recEv('fell', n); tip('fell');
+  return true;
+}
+function deepWoods(g) {
+  const px = g.p.x | 0, py = g.p.y | 0; let n = 0;
+  for (let y = Math.max(0, py - 2); y <= Math.min(g.H - 1, py + 2); y++) for (let x = Math.max(0, px - 2); x <= Math.min(g.W - 1, px + 2); x++) n += g.tree[y * g.W + x];
+  return n >= 7;
+}
+function treeBeside(g, a) {
+  const ax = a % g.AW, ay = (a / g.AW) | 0;
+  for (let y = Math.max(0, ay - 1); y <= Math.min(g.H - 1, ay + 2); y++) for (let x = Math.max(0, ax - 1); x <= Math.min(g.W - 1, ax + 2); x++) if (g.tree[y * g.W + x]) return true;
+  return false;
+}
 // Every open tile must sit inside some open 2x2 spot, so there's no pocket where munchers can't reach you.
 function covered(g) {
   for (let y = 0; y < g.H; y++) for (let x = 0; x < g.W; x++) {
@@ -956,7 +1097,8 @@ function genPOIs(g) {
   const scatter = (n, fit, make) => { for (let k = 0, t = 0; k < n && t < n * 60; t++) { const x = 1 + ((R() * (W - 3)) | 0), y = 1 + ((R() * (H - 3)) | 0); if (fit(x, y) && spaced(x + 0.5, y + 0.5)) { g.pois.push(make(x, y, k)); k++; } } };
   const fits2 = (x, y) => freeAt(x, y) && freeAt(x + 1, y) && freeAt(x, y + 1) && freeAt(x + 1, y + 1);
   scatter(Math.max(3, Math.round(W * H / 320)), fits2, (x, y) => ({ type: 'vein', x: x + 1, y: y + 1, tx: x, ty: y, left: 160 }));
-  scatter(Math.max(3, Math.round(W * H / 380)), freeAt, (x, y) => ({ type: 'chest', x: x + 0.5, y: y + 0.5 }));
+  const chestMin = Math.max(7, Math.min(W, H) * 0.35);
+  scatter(Math.max(3, Math.round(W * H / 380)), (x, y) => freeAt(x, y) && Math.hypot(x + 0.5 - g.p.x, y + 0.5 - g.p.y) >= chestMin, (x, y) => ({ type: 'chest', x: x + 0.5, y: y + 0.5 }));
   const kinds = Object.keys(SHRINES);
   scatter(Math.max(2, Math.round(W * H / 520)), freeAt, (x, y, k) => ({ type: 'shrine', x: x + 0.5, y: y + 0.5, kind: kinds[k % kinds.length], cd: 0 }));
   scatter(Math.max(1, Math.round(W * H / 1300)), freeAt, (x, y) => ({ type: 'well', x: x + 0.5, y: y + 0.5 }));
@@ -1117,9 +1259,10 @@ function updateVision() {
       if (v > 0.3) g.seen[i] = 1;
     }
   };
-  src(g.p.x, g.p.y, (g.vision + (g.buffs.sight > 0 ? 6 : 0)) * (g.nightT > 0 ? 0.55 : 1));
+  const deep = g.forest && deepWoods(g); if (deep && ui.started) tip('woods');
+  src(g.p.x, g.p.y, (g.vision + (g.buffs.sight > 0 ? 6 : 0)) * (g.nightT > 0 ? 0.55 : 1) * (deep ? 0.7 : 1));
   const night = g.nightT > 0 ? 0.55 : 1;
-  for (const B of g.bld.values()) if (!B.ruin && B.kind !== 'mud') src(B.x + 1, B.y + 1, (B.kind === 'tower' ? TOWER_RANGE + 1 + 0.75 * L('sharp') + TOWER_LV.range[(B.lv || 1) - 1] : B.kind === 'look' ? [0, 9, 12, 14][B.lv || 1] : B.kind === 'mine' ? 2.5 : 2.2) * (B.kind === 'look' ? 1 : night));
+  for (const B of g.bld.values()) if (!B.ruin && B.kind !== 'mud') src(B.x + 1, B.y + 1, (B.kind === 'tower' ? TOWER_RANGE + 1 + 0.75 * L('sharp') + TOWER_LV.range[(B.lv || 1) - 1] : B.kind === 'look' ? [0, 9, 12, 14][B.lv || 1] + (HAS('glass') ? 3 : 0) : B.kind === 'mine' ? 2.5 : 2.2) * (B.kind === 'look' ? 1 : night));
   g.fogDirty = true;
 }
 function visAt(x, y) {
@@ -1170,7 +1313,7 @@ function pushSpot(bx, by) {
 const WHY = { far: 'Too far. Build right next to you.', blocked: "Something's in the way.", you: 'No room to step aside here.', chaser: 'A muncher is in the way.', gold: 'Not enough gold.', spent: 'This ground is dug out. Mines need fresh ground.' };
 function place(kind, bx, by) {
   const g = G, id = g.nid++;
-  const max = kind === 'wall' ? g.wallHp * Math.pow(1.6, L('stone')) : kind === 'tower' ? TOWER_HP : kind === 'scare' ? 60 : kind === 'look' ? 40 : MINE_HP;
+  const max = kind === 'wall' ? g.wallHp * wallMul() : kind === 'tower' ? TOWER_HP : kind === 'scare' ? 60 : kind === 'look' ? 40 : MINE_HP;
   const B = { id, kind, x: bx, y: by, hp: max, max, cd: kind === 'mine' ? MINE_EVERY : kind === 'scare' ? 3 : 0, ang: -Math.PI / 2, pop: 0.25, shake: 0, pulse: 0, store: 0, ammo: ammoCap() };
   B.lv = 1; B.worth = COST[kind] || 3;
   if (kind === 'mine') {
@@ -1214,9 +1357,10 @@ function updateCosts() {
   for (const k of ['tower', 'mine', 'look']) { const el = document.querySelector(`[data-cost="${k}"]`); if (el) el.textContent = COST[k]; }
   if ((n >= 4 || m >= 4) && ui.started) tip('towercost');
 }
-function maxHp(B) {
+function maxHp(B) { return maxHp0(B) * (B.evo ? 1.5 : 1); }
+function maxHp0(B) {
   const l = (B.lv || 1) - 1;
-  if (B.kind === 'wall') return G.wallHp * WALL_LV[l] * Math.pow(1.6, L('stone'));
+  if (B.kind === 'wall') return G.wallHp * WALL_LV[l] * wallMul();
   if (B.kind === 'tower') return TOWER_LV.hp[l];
   if (B.kind === 'mine') return MINE_LV.hp[l];
   if (B.kind === 'scare') return l ? 90 : 60;
@@ -1229,7 +1373,7 @@ function upInfo(B) {
   const miss = 1 - B.hp / B.max;
   if (miss > 0.02) return { act: 'fix', cost: Math.max(1, Math.ceil((B.worth || 3) * miss * 0.5)), label: 'Fix' };
   const ups = UP_COST[B.kind], lv = B.lv || 1;
-  if (!ups || lv > ups.length) return { act: 'max', cost: 0, label: 'Max' };
+  if (!ups || lv > ups.length) { const ev = EVO[B.kind]; if (ev && !B.evo && !B.ruin && HAS(ev.charm)) return { act: 'evo', cost: ev.cost, label: ev.name }; return { act: 'max', cost: 0, label: 'Max' }; }
   if (B.kind === 'look') return { act: 'up', cost: ups[lv - 1], label: lv === 1 ? 'Spotter or Sniper' : B.br === 'snipe' ? 'Eagle nest' : 'Signal tower' };
   return { act: 'up', cost: ups[lv - 1], label: LV_NAME[B.kind][lv] };
 }
@@ -1249,11 +1393,21 @@ function upgradeAt(w) {
   if (!u || u.act === 'max') { toast(B.kind === 'mud' ? "Mud can't be upgraded." : 'That one is as good as it gets.'); sfx('deny'); return false; }
   if (g.gold < u.cost) { toast(`Not enough gold. ${u.act === 'fix' ? 'Fixing' : 'Upgrading'} costs ${u.cost}.`); sfx('deny'); return false; }
   if (u.act === 'up' && B.kind === 'look' && (B.lv || 1) === 1) { openFork(B, u.cost); return true; }
+  if (u.act === 'evo') { g.gold -= u.cost; g.spent += u.cost; B.worth = (B.worth || 3) + u.cost; evolve(B); recEv('evo', [B.kind, u.cost]); return true; }
   g.gold -= u.cost; g.spent += u.cost;
   recEv(u.act, [B.kind, (B.lv || 1) + (u.act === 'up' ? 1 : 0), u.cost]);
   if (u.act === 'up') { B.worth = (B.worth || 3) + u.cost; levelUp(B); floatText(B.x + 1, B.y - 0.2, `${u.label}!`, 'gold'); puff(B.x + 1, B.y + 1, 'mine', 14); sfx('research'); }
   else { B.hp = B.max; B.pop = 0.2; g.dirty = true; floatText(B.x + 1, B.y - 0.2, 'Fixed!', 'gold'); ring(B.x + 1, B.y + 1, 0.8, 2.1, 'dust'); sfx('build'); }
   return true;
+}
+function evolve(B) {
+  const g = G, ev = EVO[B.kind];
+  B.evo = true; B.max = maxHp(B); B.hp = B.max; B.pop = 0.45; g.evos++; g.dirty = true; g.visT = 0;
+  if (B.kind === 'tower') B.ammo = ammoCap(B);
+  if (B.kind === 'mine') { B.dry = false; B.caveT = undefined; B.ore = Math.max(B.ore, 1); }
+  floatText(B.x + 1, B.y - 0.3, `${ev.name}!`, 'gold');
+  ring(B.x + 1, B.y + 1, 0.6, 3.2, 'gold'); ring(B.x + 1, B.y + 1, 0.4, 2.4, 'frost'); puff(B.x + 1, B.y + 1, 'mine', 24); g.shake = Math.max(g.shake, 0.1);
+  sfx('win'); toast(CHARMS[ev.charm].evoText.replace(/^Evolves [^:]+? into an? /, '').replace(/^[a-z]/, ch => ch.toUpperCase()));
 }
 // The lookout's level-2 fork: two big buttons, time slowed while you choose, nothing spent until you pick.
 function openFork(B, cost) {
@@ -1291,7 +1445,7 @@ function razeAt(w) {
   const g = G;
   if (w.x < 0 || w.y < 0 || w.x >= g.W || w.y >= g.H) return false;
   const ti = (w.y | 0) * g.W + (w.x | 0), id = g.bmap[ti] >= 0 ? g.bmap[ti] : g.mudmap[ti];
-  if (id < 0) { toast('Nothing to knock down there.'); sfx('deny'); return false; }
+  if (id < 0) { if (g.tree[ti]) return fellAt(w); toast('Nothing to knock down there.'); sfx('deny'); return false; }
   const B = g.bld.get(id);
   if (Math.hypot(B.x + 1 - g.p.x, B.y + 1 - g.p.y) > g.reach + 0.75) { toast('Too far. Get closer to knock it down.'); sfx('deny'); return false; }
   destroy(B, true);
@@ -1364,12 +1518,13 @@ function planWave(n) {
   }
   // from act 2, every third wave burrows up in a ring around you instead of walking in from an edge
   if (actAt(g.t) >= 1 && n % 3 === 0) {
-    const ring = [];
+    let ring = [];
     for (let a = 0; a < g.AW * g.AH; a++) {
       if (!g.stand[a]) continue;
       const d = Math.hypot(ax0(a) - g.p.x, ay0(a) - g.p.y);
       if (d >= 7 && d <= 11) ring.push(a);
     }
+    if (g.forest) { const wood = ring.filter(a => treeBeside(g, a)); if (wood.length >= cnt * 2) ring = wood; }
     if (ring.length >= cnt) {
       const ang0 = R() * Math.PI * 2;
       for (let i = 0; i < cnt; i++) {
@@ -1437,6 +1592,7 @@ function moveInput() {
   let x = 0, y = 0;
   for (const k of keys) { const m = MOVE[k]; if (m) { x += m[0]; y += m[1]; } }
   if (x || y) { const d = Math.hypot(x, y); return { x: x / d, y: y / d }; }
+  if (ui.gp && Math.hypot(ui.gp.x, ui.gp.y) > 0.22) { const d = Math.hypot(ui.gp.x, ui.gp.y), m = Math.min(1, (d - 0.22) / 0.7); return { x: ui.gp.x / d * m, y: ui.gp.y / d * m }; }
   if (ui.joy) {
     const dx = ui.joy.x - ui.joy.ox, dy = ui.joy.y - ui.joy.oy, d = Math.hypot(dx, dy);
     if (d < 8) return { x: 0, y: 0 };
@@ -1451,6 +1607,7 @@ function step(dt) {
   if (!g || g.over) return;
   g.t += dt;
   const p = g.p, mv = moveInput(), mag = Math.hypot(mv.x, mv.y);
+  if (g.coach) coachTick(g, mag > 0.3, dt);
   const speed = g.pSpeed * Math.pow(1.07, L('swift')) * (g.buffs.speed > 0 ? 1.35 : 1);
   if (mag > 0.01) {
     moveBox(p, mv.x * speed * dt, mv.y * speed * dt, PH);
@@ -1468,6 +1625,7 @@ function step(dt) {
   if (g.nightT > 0) { g.nightT -= dt; if (g.nightT <= 0) { toast('Dawn. You can see again.'); g.visT = 0; } }
   const goldMul = (g.rushT > 0 ? 2 : 1) * (g.buffs.gold > 0 ? 2 : 1);
   g.trickleT += dt * Math.pow(1.5, L('trickle')) * goldMul;
+  if (HAS('piggy')) { g.piggyT += dt; if (g.piggyT >= 30) { g.piggyT -= 30; const it = Math.min(15, Math.floor(g.gold * 0.05)); if (it > 0) { g.gold += it; floatText(p.x, p.y - 1.2, `+${it} interest`, 'gold'); sfx('coin'); } } }
   if (g.trickle > 0 && g.trickleT >= g.trickle) { g.trickleT -= g.trickle; g.gold += 1; }
   if (g.gold < COST.wall && g.t > 6) tip('gold');
   g.rp += dt;
@@ -1482,7 +1640,7 @@ function step(dt) {
   if (act !== g.act) {
     g.act = act;
     const subs = ['The herd wakes up. Build your maze.', 'Chargers, packs and prickles join. Some waves burrow up right beside you.', 'Tanks arrive, and more wreckers.', 'Everything at once, twice as often.'];
-    banner(`Act ${act + 1}`, subs[act]);
+    if (!(g.coach && act === 0)) banner(`Act ${act + 1}`, subs[act]); // the coach covers act 1 on a first run
     if (act >= 1) spawnBoss(act - 1);
     recEv('act', act); recSnap(`act${act + 1}`);
     if (act === 3) { g.waveEvery = cfg.waveEvery / 2; }
@@ -1496,7 +1654,7 @@ function step(dt) {
 
   if (!g.plan && g.t >= g.nextWave - TELE) {
     g.planSide = -1; g.plan = planWave(g.wave + 1);
-    if (ui.started) toast(g.planSide === 5 ? 'Something is digging up around you!' : g.planSide === 4 ? 'Munchers are coming out of the den!' : `Munchers incoming from the ${['north', 'east', 'south', 'west'][g.planSide] || 'far side'}!`);
+    if (ui.started) toast(g.planSide === 5 ? (g.forest ? 'Something is rustling in the trees!' : 'Something is digging up around you!') : g.planSide === 4 ? 'Munchers are coming out of the den!' : `Munchers incoming from the ${['north', 'east', 'south', 'west'][g.planSide] || 'far side'}!`);
     if (g.planSide === 5) { g.mounds = g.plan.map(a => ({ x: ax0(a), y: ay0(a), t: g.t })); tip('ambush'); sfx('windup'); }
   }
   if (g.t >= g.nextWave) {
@@ -1506,7 +1664,7 @@ function step(dt) {
     recEv('wave', [g.wave, g.lvl, Math.round(herdHp())]);
     const plan = g.plan || planWave(g.wave), kinds = g.planKinds || [];
     g.plan = null;
-    if (g.mounds) { for (const m of g.mounds) puff(m.x, m.y, 'mud', 10); g.mounds = null; }
+    if (g.mounds) { for (const m of g.mounds) puff(m.x, m.y, g.forest ? 'leaf' : 'mud', 10); g.mounds = null; }
     plan.forEach((a, i) => { const k = kinds[i] || 'grazer'; g.queue.push({ a, at: g.t + i * 0.45, hp: Math.max(2, Math.round(waveHpAt(g.t) * KINDS[k].hp)), kind: k, opt: { wave: g.wave } }); });
     sfx('horn');
     g.nextWave += g.waveEvery;
@@ -1519,9 +1677,12 @@ function step(dt) {
 
   // things on the map: chests open when you walk onto them, shrines give a short boost
   for (const P of g.pois) {
-    if (P.type === 'chest' && !P.open && Math.hypot(P.x - p.x, P.y - p.y) < (ui.touch ? 1.5 : 1)) {
-      P.open = true; P.openT = g.t; g.free++; g.lastFree = 'chest'; recEv('chest', P.boss ? 'boss' : 'plain'); const gold = P.boss ? 40 : 15; g.gold += gold;
-      floatText(P.x, P.y - 0.8, `+${gold} and a free upgrade!`, 'gold'); ring(P.x, P.y, 0.4, 2.2, 'gold'); puff(P.x, P.y, 'mine', 18); sfx('chest'); tip('chest');
+    if (P.type === 'chest' && !P.open && Math.hypot(P.x - p.x, P.y - p.y) < (ui.touch ? 1.5 : 1) + (HAS('magnet') ? 0.5 : 0)) {
+      P.open = true; P.openT = g.t; recEv('chest', P.boss ? 'boss' : 'plain'); const gold = P.boss ? 40 : 15; g.gold += gold;
+      const charm = g.charms.length + g.charmPick < (P.boss ? CHARM_MAX : charmCap(g));
+      if (charm) { g.charmPick++; g.offer = null; tip('charm'); } if (!charm || P.boss) { g.free++; g.lastFree = 'chest'; }
+      if (!charm && g.charms.length < CHARM_MAX) tip('charmcap');
+      floatText(P.x, P.y - 0.8, charm ? `+${gold} and a charm!` : `+${gold} and a free upgrade!`, 'gold'); ring(P.x, P.y, 0.4, 2.2, 'gold'); puff(P.x, P.y, 'mine', 18); sfx('chest'); tip('chest');
       if (ui.started) openResearch();
     } else if (P.type === 'shrine') {
       if (P.cd > 0) P.cd -= dt;
@@ -1535,11 +1696,15 @@ function step(dt) {
   }
   g.pois = g.pois.filter(P => !(P.type === 'chest' && P.open && g.t - P.openT > 1.2));
   g.nearWell = g.pois.find(P => P.type === 'well' && Math.hypot(P.x - p.x, P.y - p.y) < 1.7) || null;
+  g.near = upPick(g.near && g.near.B.id);
+  if (g.near && g.near.u.act === 'evo' && !g.coach) tip('evo');
+  if (g.forest && g.t > 4 && !g.coach) tip('forest');
+  if (g.near && g.near.ok && !g.coach) tip('holdup');
   if (g.nearWell) tip('well');
   if (g.gold >= 250) tip('rich');
 
-  const reachT = g.reach + (ui.touch ? 1.75 : 0.75), grab = ui.touch ? 3.4 : 2.4;
-  const feeders = [], spotters = []; for (const B of g.bld.values()) { if (B.ruin) continue; if (B.kind === 'mine' && !B.dry) feeders.push(B); else if (B.kind === 'look' && B.br === 'spot') spotters.push(B); }
+  const pull = HAS('magnet') ? 1.5 : 0, reachT = g.reach + (ui.touch ? 1.75 : 0.75) + pull, grab = (ui.touch ? 3.4 : 2.4) + pull;
+  const feeders = [], spotters = []; for (const B of g.bld.values()) { if (B.ruin) continue; if (B.kind === 'mine' && !B.dry) feeders.push(B); else if (B.kind === 'look' && (B.br === 'spot' || B.evo)) spotters.push(B); }
   for (const B of [...g.bld.values()]) {
     if (B.pop > 0) B.pop -= dt;
     if (B.recoil > 0) B.recoil -= dt;
@@ -1547,24 +1712,31 @@ function step(dt) {
     if (B.pulse > 0) B.pulse -= dt;
     const near = Math.hypot(B.x + 1 - p.x, B.y + 1 - p.y);
     if (B.kind === 'wall' && L('mend') && B.hp < B.max) B.hp = Math.min(B.max, B.hp + L('mend') * dt);
+    if (B.kind === 'wall' && B.evo && B.hp < B.max && g.t - (B.chewedAt ?? -99) > 2) B.hp = Math.min(B.max, B.hp + B.max * 0.03 * dt);
     if (B.kind === 'tower') {
       // towers run out of acorns; walk past to reload
       const cap = ammoCap(B), lvi = (B.lv || 1) - 1;
       if (near <= reachT && B.ammo < cap) { if (B.ammo < 1) sfx('reload', B.x + 1, B.y + 1); B.ammo = Math.min(cap, B.ammo + (20 + 10 * L('mag')) * dt); }
       else if (!B.ruin && B.ammo < cap) { B.fed = false; for (const M of feeders) if (Math.abs(M.x - B.x) <= FEED_R && Math.abs(M.y - B.y) <= FEED_R && Math.hypot(M.x - B.x, M.y - B.y) <= FEED_R) { B.ammo = Math.min(cap, B.ammo + FEED_RATE * MINE_LV.rate[(M.lv || 1) - 1] * dt); B.fed = true; break; } }
       B.cd -= dt;
+      if (B.evo) {
+        // the blizzard spire: every 6 s a cold snap freezes small fry solid and slows everything in range
+        const ex = B.x + 1, ey = B.y + 1, fr = TOWER_RANGE + 0.75 * L('sharp') + TOWER_LV.range[lvi] + 0.5;
+        B.fz = (B.fz ?? 2) - dt;
+        if (B.fz <= 0) { let any = false; for (const c of g.ch) if (!c.dead && Math.hypot(c.x - ex, c.y - ey) <= fr + 0.6) { any = true; c.slowT = Math.max(c.slowT, 2.5); if (!c.boss) c.stun = Math.max(c.stun, 0.9); } if (any) { B.fz = 6; ring(ex, ey, 0.5, fr, 'frost'); sfx('freeze', ex, ey); } else B.fz = 0.5; }
+      }
       if (B.cd <= 0 && B.ammo >= 1) {
         const boost = spotters.length ? spotBoost(B, spotters) : { r: 0, m: 1 };
-        const cx = B.x + 1, cy = B.y + 1, range = TOWER_RANGE + 0.75 * L('sharp') + TOWER_LV.range[lvi] + boost.r; let tgt = null, bd = Infinity;
+        const cx = B.x + 1, cy = B.y + 1, range = TOWER_RANGE + 0.75 * L('sharp') + TOWER_LV.range[lvi] + boost.r + (B.evo ? 0.5 : 0); let tgt = null, bd = Infinity;
         for (const c of g.ch) { const d = Math.hypot(c.x - cx, c.y - cy); if (!c.dead && d <= range + (c.size === 2 ? 0.9 : 0.35) && d < bd) { bd = d; tgt = c; } }
         if (tgt) {
-          B.cd = 1 / (TOWER_RATE * Math.pow(1.25, L('rapid'))); B.ang = Math.atan2(tgt.y - cy, tgt.x - cx); B.recoil = 0.12; B.ammo -= 1;
+          B.cd = 1 / (TOWER_RATE * Math.pow(1.25, L('rapid')) * (HAS('globe') ? 1.15 : 1)); B.ang = Math.atan2(tgt.y - cy, tgt.x - cx); B.recoil = 0.12; B.ammo -= 1;
           if (B.ammo < 1) { tip('ammo'); if (offView(cx, cy) && ui.started) toast('A tower ran out of acorns. Walk past it, or build a mine next to it.'); }
           const x1 = cx + Math.cos(B.ang) * 0.75, y1 = cy + Math.sin(B.ang) * 0.75, kind = L('cannon') ? 'cannon' : L('frost') ? 'frost' : 'dart';
           g.shots.push({ x1, y1, x2: tgt.x, y2: tgt.y, t: 0.16 });
           g.proj.push({ x1, y1, x2: tgt.x, y2: tgt.y, t: 0, d: 0.06 + bd * 0.03, kind });
           const slow = [0, 1.2, 2][L('frost')], freeze = L('blizzard') && Math.random() < 0.25;
-          const dmg = TOWER_DMG * TOWER_LV.dmg[lvi] * boost.m;
+          const dmg = TOWER_DMG * TOWER_LV.dmg[lvi] * boost.m * (B.evo ? 1.4 : 1);
           const hit = o => { if (slow) o.slowT = Math.max(o.slowT, slow); if (freeze && !o.boss) o.stun = Math.max(o.stun, 1); hurt(o, dmg); };
           hit(tgt);
           const splash = [0, 1.4, 2][L('cannon')];
@@ -1572,10 +1744,10 @@ function step(dt) {
           sfx(kind === 'cannon' ? 'boom' : kind === 'frost' ? 'freeze' : 'shot', cx, cy);
         }
       }
-    } else if (B.kind === 'look' && B.br && !B.ruin) {
-      const lv = B.lv || 1, cx = B.x + 1, cy = B.y + 1;
-      B.cd = (B.cd || 0) - dt;
-      if (B.br === 'snipe' && B.cd <= 0) {
+    } else if (B.kind === 'look' && (B.br || B.evo) && !B.ruin) {
+      const lv = B.lv || 1, cx = B.x + 1, cy = B.y + 1, snipe = B.br === 'snipe' || B.evo, spot = B.br === 'spot' || B.evo;
+      B.cd = (B.cd || 0) - dt; B.fcd = (B.fcd || 0) - dt;
+      if (snipe && B.cd <= 0) {
         // the sniper: a slow, long shot at the toughest muncher in range
         let tgt = null, best = -1;
         for (const c of g.ch) { if (c.dead) continue; const d = Math.hypot(c.x - cx, c.y - cy); if (d <= SNIPE.range[lv] && c.hp > best) { best = c.hp; tgt = c; } }
@@ -1587,23 +1759,24 @@ function step(dt) {
           hurt(tgt, Math.max(4, herdHp() * SNIPE.hit[lv]));
           sfx('boom', cx, cy);
         } else B.cd = 0.4;
-      } else if (B.br === 'spot' && lv >= 3 && B.cd <= 0) {
+      }
+      if (spot && lv >= 3 && B.fcd <= 0) {
         // the signal tower's flare: slows everything near it
         let any = false;
         for (const c of g.ch) if (!c.dead && Math.hypot(c.x - cx, c.y - cy) <= SPOT_R[lv]) { c.slowT = Math.max(c.slowT, 3); any = true; }
-        if (any) { B.cd = 12; ring(cx, cy, 0.5, SPOT_R[lv], 'frost'); sfx('freeze', cx, cy); } else B.cd = 1;
+        if (any) { B.fcd = 12; ring(cx, cy, 0.5, SPOT_R[lv], 'frost'); sfx('freeze', cx, cy); } else B.fcd = 1;
       }
     } else if (B.kind === 'mine') {
       // mines fill up; walk next to them to collect
       B.cd -= dt;
       const mcap = mineCap(B);
       if (B.cd <= 0) {
-        B.cd += MINE_EVERY / MINE_LV.rate[(B.lv || 1) - 1];
+        B.cd += MINE_EVERY / (MINE_LV.rate[(B.lv || 1) - 1] * (HAS('pick') ? 1.25 : 1) * (B.evo ? 2 : 1));
         if (B.store < mcap && !B.dry) {
           // dig: veins pay double until they run dry, otherwise the ground's ore runs down
           let pay = MINE_PAY;
           if (B.vein && B.vein.left > 0) { pay *= 2; B.vein.left -= pay; if (B.vein.left <= 0) { B.vein.left = 0; toast('A gold vein ran dry. Find another one.'); } }
-          else {
+          else if (!B.evo) {
             pay = Math.min(pay, B.ore); B.ore -= pay;
             if (B.ore <= 0.01) { B.ore = 0; B.dry = true; tip('dry'); recEv('dry', 0); if (ui.started) toast(offView(B.x + 1, B.y + 1) ? 'A mine somewhere is dug out.' : 'This mine is dug out. Build the next one on fresh ground.'); }
           }
@@ -1692,6 +1865,7 @@ function kill(c) {
   let bounty = (c.boss ? 40 : KINDS[c.kind].bounty * [1, 0.85, 0.7, 0.6][Math.max(0, g.act)]) * Math.pow(1.5, L('bounty')) + (L('goldrush') ? 5 : 0);
   bounty = Math.round(bounty);
   g.kills++; g.gold += bounty;
+  if (HAS('clover') && ++g.cloverN % 5 === 0) { g.gold += 5; floatText(c.x, c.y - 1.6, '+5 lucky!', 'gold'); }
   if (c.wave) { const ws = g.wstats.get(c.wave); if (ws) { ws.dead++; ws.ttk += g.t - c.born; ws.minD = Math.min(ws.minD, c.minD); if (ws.dead >= ws.n) waveDone(c.wave, ws); } }
   if (c.boss) recEv('bossKill', c.boss); g.rp += cfg.rpKill + (L('goldrush') ? 2 : 0) + (c.boss ? 20 : 0);
   puff(c.x, c.y, 'kill', c.size === 2 ? 26 : 12);
@@ -1725,6 +1899,7 @@ function chewOn(c, B, dt) {
   if (Math.random() < dt * 6) crumb(B, c);
   const spike = [0, 3, 6, 9][L('spikes')] * (L('thorns') ? 3 : 1);
   if (spike && B.kind === 'wall') { hurt(c, spike * dt, Math.random() < 0.1); if (L('thorns')) c.slowT = Math.max(c.slowT, 0.5); }
+  if (B.kind === 'wall' && B.evo && !c.dead) { hurt(c, 12 * dt, Math.random() < 0.1); c.slowT = Math.max(c.slowT, 1); }
   if (B.hp <= 0 && g.bld.has(B.id)) destroy(B, false);
 }
 
@@ -1862,6 +2037,7 @@ function checkHits() {
     if (c.stun > 0) continue;
     if (c.dead || !boxHit(c.x, c.y, c.size === 2 ? CATCH : 0.3, p.x, p.y, PH)) continue;
     g.hearts--; g.hits++; g.inv = g.grace + 1.5 * L('grace');
+    if (g.hearts <= 0 && HAS('locket') && !g.locketUsed) { g.locketUsed = true; g.hearts = 1; g.inv = Math.max(g.inv, 4); hudCache.hearts = ''; banner('The locket saved you!', 'One heart left. Run!'); recEv('locket', 0); }
     if (c.wave) { const ws = g.wstats.get(c.wave); if (ws) ws.hit = true; }
     if (g.rec) g.rec.hits++;
     recEv('hit', [g.hearts, c.kind, c.boss ? 1 : 0, g.lvl]); recSnap('hit'); g.shake = 0.35; g.flash = 0.5; g.slow = 0.3;
@@ -1869,8 +2045,9 @@ function checkHits() {
     try { if (navigator.vibrate) navigator.vibrate(40); } catch (e) { /* not allowed here */ }
     for (const o of g.ch) {
       const dx = o.x - p.x, dy = o.y - p.y, d = Math.hypot(dx, dy) || 1;
-      if (d < 3) { o.stun = o === c ? (o.boss ? 1.2 : g.stunHit) : Math.max(o.stun, 0.5); o.kb = 0.22; o.kbx = dx / d * 7; o.kby = dy / d * 7; }
+      if (d < 3) { const me = o === c; o.stun = me ? (o.boss ? 1.2 : Math.max(g.stunHit, g.inv + 1.5)) : Math.max(o.stun, 0.8); o.kb = me ? 0.3 : 0.22; o.kbx = dx / d * (me ? 13 : 8); o.kby = dy / d * (me ? 13 : 8); }
     }
+    g.buffs.speed = Math.max(g.buffs.speed, 1.5); // a burst of speed to get away
     puff(p.x, p.y, 'hit', 14);
     floatText(p.x, p.y - 0.9, g.hearts === 2 ? 'Ouch!' : g.hearts === 1 ? 'Last heart!' : 'Caught!', 'bad');
     if (g.hearts <= 0) endRun(false);
@@ -1881,7 +2058,7 @@ function checkHits() {
 function endRun(won) {
   const g = G; if (g.over) return;
   g.over = won ? 'won' : 'caught'; g.endT = Math.min(g.t, g.round);
-  ui.hover = null; ui.joy = null; ui.joyPtr = null; ui.buildPtr = null; ui.pad = null; ui.padPtr = null; if (ui.fork) closeFork();
+  ui.hover = null; ui.joy = null; ui.joyPtr = null; ui.buildPtr = null; ui.pad = null; ui.padPtr = null; if (ui.fork) closeFork(); $('#coach').hidden = true;
   ui.endTimer = won ? 0.4 : 0.9;
   sfx(won ? 'win' : 'lose');
   recEnd(won);
@@ -1900,7 +2077,7 @@ const ROW_KEYS = ['t', 'wave', 'lvl', 'gold', 'spent', 'hearts', 'alive', 'kills
 function recStart(g) {
   if (REC.doc && !REC.doc.end) { REC.doc.end = { result: 'quit', t: Math.round(REC.lastT || 0) }; recSave(); }
   REC.id = `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
-  const c = {}; for (const k of ['map', 'round', 'reach', 'pSpeed', 'cPct', 'gold', 'wallCost', 'waveEvery', 'wallHp', 'trickle', 'monsters', 'spawn', 'fog', 'herd', 'adapt', 'researchPause', 'touchHeart', 'style']) c[k] = cfg[k];
+  const c = {}; for (const k of ['map', 'round', 'reach', 'pSpeed', 'cPct', 'gold', 'wallCost', 'waveEvery', 'wallHp', 'trickle', 'monsters', 'spawn', 'fog', 'herd', 'adapt', 'researchPause', 'touchHeart', 'style', 'biome']) c[k] = cfg[k];
   REC.doc = { v: 1, started: new Date().toISOString(), seed: g.seed, cfg: c, touch: !!ui.touch, sideways: !!rot, rowKeys: ROW_KEYS, rows: [], waves: [], ev: [], snaps: [], end: null };
   g.rec = { nextRow: 0, nextSave: 60, minD: Infinity, hits: 0, lost: 0 };
 }
@@ -1948,7 +2125,7 @@ async function recSave() {
 function recEnd(won) {
   const g = G; if (!REC.doc || !g.rec) return;
   recSnap('end');
-  REC.doc.end = { result: won ? 'won' : 'caught', t: Math.round(g.endT), wave: g.wave, lvl: g.lvl, bonusLv: g.bonusLv, kills: g.kills, spent: g.spent, gold: Math.round(g.gold), built: g.built, razed: g.razed, upgraded: g.upgraded, picks: g.picks, bought: g.bought, cards: g.lv, hearts: g.hearts, maxHearts: g.maxHearts, bosses: g.bossesKilled };
+  REC.doc.end = { result: won ? 'won' : 'caught', t: Math.round(g.endT), wave: g.wave, lvl: g.lvl, bonusLv: g.bonusLv, kills: g.kills, spent: g.spent, gold: Math.round(g.gold), built: g.built, razed: g.razed, upgraded: g.upgraded, felled: g.felled, charms: g.charms, evos: g.evos, picks: g.picks, bought: g.bought, cards: g.lv, hearts: g.hearts, maxHearts: g.maxHearts, bosses: g.bossesKilled };
   recSave();
 }
 function recNote() { const el = document.getElementById('recNote'); if (el && SITE) { el.textContent = REC.state === 'saved' ? 'Run saved. Thanks for testing!' : ''; return; } if (el) el.textContent = REC.state === 'saved' ? 'Run log saved for Claude to review.' : REC.state === 'error' ? "Couldn't save the run log." : REC.state === 'ready' ? 'Saving the run log for Claude...' : ''; }
@@ -1956,7 +2133,7 @@ function recNote() { const el = document.getElementById('recNote'); if (el && SI
 // ---------------------------------------------------------------- effects
 function puff(x, y, kind, n) {
   const g = G, S = STY[cfg.style];
-  const col = { build: S.ok, wall: S.wall, tower: S.tower, mine: S.gold, kill: S.chaser, spawn: S.chaser, hit: S.bad }[kind] || '#fff';
+  const col = { build: S.ok, wall: S.wall, tower: S.tower, mine: S.gold, kill: S.chaser, spawn: S.chaser, hit: S.bad, leaf: '#4fae48' }[kind] || '#fff';
   for (let i = 0; i < n; i++) {
     const a = Math.random() * Math.PI * 2, v = 1.5 + Math.random() * 4;
     g.fx.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 1, life: 0.45 + Math.random() * 0.35, max: 0.8, s: 0.08 + Math.random() * 0.1, col });
@@ -2035,7 +2212,7 @@ function pt(e) {
 }
 function setTouch(on) {
   if (ui.touch === on) return;
-  ui.touch = on; applyOrient(); layout(); drawIcons();
+  ui.touch = on; applyOrient(); layout(); drawIcons(); if (G && G.coach) coachShow();
 }
 // Touch layout: the big build pad in the bottom-right corner, tool buttons stacked above it (beside it in portrait).
 function placeControls(portrait) {
@@ -2194,8 +2371,57 @@ function buildBoard() {
       if (h % 3 === 0) { c.beginPath(); c.arc(px + ts * 0.42, py + ts * 0.44, ts * 0.07, 0, 7); c.fillStyle = '#ff9ec7'; c.fill(); }
     }
   }
-  for (let y = 0; y < g.H; y++) for (let x = 0; x < g.W; x++) if (g.rock[y * g.W + x] && !g.water[y * g.W + x]) drawRock(c, L + x * ts, T + y * ts, ts, S, K, (x * 7 + y * 13) % 5);
+  for (let y = 0; y < g.H; y++) for (let x = 0; x < g.W; x++) if (g.ford[y * g.W + x]) {
+    const px = L + x * ts, py = T + y * ts, h = ((x * 73856093) ^ (y * 19349663)) >>> 0;
+    c.globalAlpha = 0.45; c.fillStyle = S.water; c.fillRect(px - 0.5, py - 0.5, ts + 1, ts + 1); c.globalAlpha = 1;
+    c.fillStyle = S.rock2 || S.rock;
+    for (const [u, v] of h % 2 ? [[0.3, 0.32], [0.68, 0.72]] : [[0.7, 0.3], [0.32, 0.7]]) { c.beginPath(); c.ellipse(px + ts * u, py + ts * v, ts * 0.17, ts * 0.12, 0, 0, 7); c.fill(); inkStroke(c, S, Math.max(1, ts * 0.05)); }
+  }
+  for (let y = 0; y < g.H; y++) for (let x = 0; x < g.W; x++) if (g.rock[y * g.W + x] && !g.water[y * g.W + x] && !g.tree[y * g.W + x]) drawRock(c, L + x * ts, T + y * ts, ts, S, K, (x * 7 + y * 13) % 5);
   boardCache.m = m; boardCache.w = bw; boardCache.h = bh;
+}
+// Trees: one sprite per look, drawn every frame for the tiles in view (so felling doesn't rebuild the board).
+const TREE_SPR = new Map();
+function drawTree(c, s, S, K, v) {
+  const ink = S.ink, lw = Math.max(1.5, s * 0.08);
+  c.beginPath(); c.ellipse(s * 0.5, s * 0.88, s * 0.44, s * 0.14, 0, 0, 7); c.fillStyle = 'rgba(30,40,20,.22)'; c.fill();
+  rr(c, s * 0.42, s * 0.5, s * 0.16, s * 0.4, s * 0.05); c.fillStyle = '#8a5a35'; c.fill(); inkStroke(c, S, lw);
+  if (v === 1) {
+    const tri = (cy, hw, hh) => { c.beginPath(); c.moveTo(s * 0.5, cy - hh); c.lineTo(s * 0.5 + hw, cy); c.lineTo(s * 0.5 - hw, cy); c.closePath(); };
+    for (const [cy, hw, hh, col] of [[s * 0.74, s * 0.46, s * 0.5, '#2f7d46'], [s * 0.44, s * 0.36, s * 0.5, '#3a9152']]) {
+      tri(cy, hw, hh); c.fillStyle = col; c.fill(); inkStroke(c, S, lw);
+      if (S.snow) { c.save(); tri(cy, hw, hh); c.clip(); c.beginPath(); c.ellipse(s * 0.5, cy - hh, hw * 0.7, hh * 0.45, 0, 0, 7); c.fillStyle = '#ffffff'; c.fill(); c.restore(); tri(cy, hw, hh); inkStroke(c, S, lw); }
+    }
+    c.fillStyle = 'rgba(255,255,255,.25)'; c.beginPath(); c.ellipse(s * 0.42, s * 0.12, s * 0.05, s * 0.1, 0.4, 0, 7); c.fill();
+    return;
+  }
+  const blobs = [[0.5, 0.28, 0.34], [0.27, 0.5, 0.26], [0.73, 0.5, 0.26], [0.5, 0.56, 0.28]];
+  const path = () => { c.beginPath(); for (const [u, w, r] of blobs) { c.moveTo(s * (u + r), s * w); c.arc(s * u, s * w, s * r, 0, 7); } };
+  if (ink) { path(); c.lineWidth = lw * 2; c.strokeStyle = ink; c.lineJoin = 'round'; c.stroke(); }
+  path(); c.fillStyle = v === 2 ? '#3c9440' : '#46a046'; c.fill();
+  c.save(); path(); c.clip();
+  c.fillStyle = v === 2 ? '#4fa94a' : '#5cbc55'; c.beginPath(); c.arc(s * 0.44, s * 0.24, s * 0.24, 0, 7); c.arc(s * 0.24, s * 0.44, s * 0.15, 0, 7); c.fill();
+  if (S.snow) { c.beginPath(); c.ellipse(s * 0.5, s * 0.02, s * 0.36, s * 0.16, 0, 0, 7); c.ellipse(s * 0.25, s * 0.3, s * 0.2, s * 0.09, 0, 0, 7); c.ellipse(s * 0.75, s * 0.3, s * 0.2, s * 0.09, 0, 0, 7); c.fillStyle = '#ffffff'; c.fill(); }
+  c.restore();
+  c.fillStyle = 'rgba(255,255,255,.35)'; c.beginPath(); c.ellipse(s * 0.38, s * 0.12, s * 0.1, s * 0.05, -0.4, 0, 7); c.fill();
+  if (v === 2 && !S.snow) { c.fillStyle = '#ff5e6c'; for (const [u, w] of [[0.33, 0.48], [0.62, 0.38], [0.56, 0.62]]) { c.beginPath(); c.arc(s * u, s * w, s * 0.05, 0, 7); c.fill(); } }
+}
+function treeSprite(S, K, v) {
+  const key = `${K}|${v}|${ts}|${DPR}`; let c = TREE_SPR.get(key); if (c) return c;
+  if (TREE_SPR.size > 30) TREE_SPR.clear();
+  const s = ts, w = Math.ceil(s * 1.6), h = Math.ceil(s * 1.7);
+  c = document.createElement('canvas'); c.width = Math.ceil(w * DPR); c.height = Math.ceil(h * DPR);
+  const x = c.getContext('2d'); x.setTransform(DPR, 0, 0, DPR, 0, 0); x.translate(s * 0.3, s * 0.6);
+  drawTree(x, s, S, K, v);
+  c.ox = s * 0.3; c.oy = s * 0.6; c.w = w; c.h = h; TREE_SPR.set(key, c);
+  return c;
+}
+function drawTrees(S, K) {
+  const g = G, x0 = Math.max(0, Math.floor(-ox / ts) - 1), x1 = Math.min(g.W - 1, Math.ceil((VW - ox) / ts) + 1), y0 = Math.max(0, Math.floor(-oy / ts) - 1), y1 = Math.min(g.H - 1, Math.ceil((VH - oy) / ts) + 1);
+  for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) if (g.tree[ty * g.W + tx]) {
+    const spr = treeSprite(S, K, (((tx * 73856093) ^ (ty * 19349663)) >>> 0) % 3);
+    cx.drawImage(spr, X(tx) - spr.ox, Y(ty) - spr.oy, spr.w, spr.h);
+  }
 }
 function drawRock(c, x, y, s, S, K, v) {
   if (S.toon && S.rockShape === 'grave') {
@@ -2253,14 +2479,14 @@ function hpBar(c, x, y, w, frac, S) {
 const SPR = new Map(), SPRITE_KINDS = new Set(['wall', 'scare', 'look']);
 function buildingSprite(B, s, S, K, T) {
   const crack = B.kind === 'wall' ? (B.hp < B.max * 0.33 ? 2 : B.hp < B.max * 0.66 ? 1 : 0) : 0;
-  const key = `${K}|${B.kind}|${B.lv || 1}|${B.br || ''}|${B.ruin ? 1 : 0}|${T.spikes ? 1 : 0}|${crack}|${s}|${DPR}`;
+  const key = `${K}|${B.kind}|${B.lv || 1}|${B.br || ''}|${B.evo ? 1 : 0}|${B.ruin ? 1 : 0}|${T.spikes ? 1 : 0}|${crack}|${s}|${DPR}`;
   let sp = SPR.get(key);
   if (!sp) {
     if (SPR.size > 300) SPR.clear();
     const m = Math.ceil(s * 0.25), w = s + 2 * m, cvs = document.createElement('canvas');
     cvs.width = Math.ceil(w * DPR); cvs.height = Math.ceil(w * DPR);
     const sc = cvs.getContext('2d'); sc.setTransform(DPR, 0, 0, DPR, 0, 0);
-    drawBuilding(sc, { kind: B.kind, lv: B.lv, br: B.br, ruin: B.ruin, id: B.id, hp: crack === 2 ? 0.3 : crack === 1 ? 0.6 : 1, max: 1, pop: 0, shake: 0, pulse: 0, ang: 0, sprite: true }, m, m, s, S, K, 0);
+    drawBuilding(sc, { kind: B.kind, lv: B.lv, br: B.br, evo: B.evo, ruin: B.ruin, id: B.id, hp: crack === 2 ? 0.3 : crack === 1 ? 0.6 : 1, max: 1, pop: 0, shake: 0, pulse: 0, ang: 0, sprite: true }, m, m, s, S, K, 0);
     sp = { cv: cvs, m, w }; SPR.set(key, sp);
   }
   return sp;
@@ -2436,8 +2662,10 @@ function drawBuilding(c, B, x, y, s, S, K, now) {
       c.fillStyle = '#fff'; c.font = `700 ${s * 0.45}px ${S.font}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(T.deep ? '$$' : '$', s / 2, s / 2 + 1);
     }
   }
+  if (B.evo) drawEvo(c, B, s, S, K);
   c.restore();
   }
+  if (B.evo && !B.sprite && !B.icon && !reduced) { const a = 0.35 + 0.25 * Math.sin((now || 0) * 3 + (B.id || 0)); rr(c, x - 2, y - 2, s + 4, s + 4, s * 0.22); c.globalAlpha = a; c.strokeStyle = EVO[B.kind].col; c.lineWidth = Math.max(2, s * 0.05); c.stroke(); c.globalAlpha = 1; }
   if (B.sprite) return;
   if (B.dry) { rr(c, x + s * 0.08, y + s * 0.12, s * 0.84, s * 0.78, s * 0.2); c.fillStyle = 'rgba(120,120,130,.5)'; c.fill(); }
   if (B.hp < B.max) hpBar(c, x + s * 0.12, y - ts * 0.22, s * 0.76, B.hp / B.max, S);
@@ -2463,6 +2691,86 @@ function drawBuilding(c, B, x, y, s, S, K, now) {
     }
     if (B.kind === 'scare' && B.pulse > 0) bubble(c, x + s * 0.5, y - ts * 0.4, S, now, 'boo');
   }
+}
+// evolved buildings wear their charm
+function drawEvo(c, B, s, S, K) {
+  const ow = Math.max(1.5, s * 0.045);
+  if (B.kind === 'tower') {
+    // an ice crystal crown and a frosty rim
+    rr(c, s * 0.06, s * 0.06, s * 0.88, s * 0.88, s * 0.2); c.strokeStyle = '#bfe9ff'; c.lineWidth = Math.max(2, s * 0.06); c.stroke();
+    c.beginPath(); c.moveTo(s * 0.5, s * 0.02); c.lineTo(s * 0.6, s * 0.2); c.lineTo(s * 0.5, s * 0.36); c.lineTo(s * 0.4, s * 0.2); c.closePath(); c.fillStyle = '#d9f4ff'; c.fill(); inkStroke(c, S, ow * 0.7);
+    for (const [u, v] of [[0.14, 0.14], [0.86, 0.14], [0.14, 0.86], [0.86, 0.86]]) { c.beginPath(); c.moveTo(s * u, s * (v - 0.07)); c.lineTo(s * (u + 0.04), s * v); c.lineTo(s * u, s * (v + 0.07)); c.lineTo(s * (u - 0.04), s * v); c.closePath(); c.fillStyle = '#e8fbff'; c.fill(); inkStroke(c, S, ow * 0.5); }
+  } else if (B.kind === 'wall') {
+    // brambles wrap the wall, with thorns and two pink flowers
+    c.strokeStyle = '#3f8a3a'; c.lineWidth = Math.max(2, s * 0.07); c.lineCap = 'round';
+    c.beginPath(); c.moveTo(s * 0.04, s * 0.3); c.bezierCurveTo(s * 0.35, s * 0.05, s * 0.55, s * 0.6, s * 0.96, s * 0.35); c.moveTo(s * 0.04, s * 0.78); c.bezierCurveTo(s * 0.4, s * 0.5, s * 0.6, s * 0.98, s * 0.96, s * 0.72); c.stroke();
+    c.fillStyle = '#2f6d2b'; for (const [u, v] of [[0.2, 0.2], [0.5, 0.32], [0.78, 0.38], [0.25, 0.68], [0.55, 0.76], [0.82, 0.74]]) { c.beginPath(); c.moveTo(s * (u - 0.04), s * v); c.lineTo(s * u, s * (v - 0.09)); c.lineTo(s * (u + 0.04), s * v); c.closePath(); c.fill(); }
+    for (const [u, v] of [[0.33, 0.24], [0.7, 0.66]]) { c.fillStyle = '#ff8fb8'; for (let k = 0; k < 5; k++) { const a = k * 1.2566; c.beginPath(); c.arc(s * u + Math.cos(a) * s * 0.045, s * v + Math.sin(a) * s * 0.045, s * 0.035, 0, 7); c.fill(); } c.beginPath(); c.arc(s * u, s * v, s * 0.025, 0, 7); c.fillStyle = '#ffd23f'; c.fill(); }
+  } else if (B.kind === 'mine') {
+    // a heap of gold at the mouth and a golden arch
+    c.beginPath(); c.moveTo(s * 0.08, s * 0.86); c.quadraticCurveTo(s * 0.12, s * 0.2, s * 0.5, s * 0.16); c.quadraticCurveTo(s * 0.88, s * 0.2, s * 0.92, s * 0.86); c.strokeStyle = '#ffcf3a'; c.lineWidth = Math.max(2, s * 0.06); c.stroke();
+    for (const [u, v, r] of [[0.36, 0.84, 0.09], [0.5, 0.8, 0.1], [0.64, 0.84, 0.09], [0.43, 0.74, 0.07], [0.57, 0.74, 0.07]]) { c.beginPath(); c.arc(s * u, s * v, s * r, 0, 7); c.fillStyle = '#ffd84d'; c.fill(); inkStroke(c, S, ow * 0.5); }
+    star(c, s * 0.5, s * 0.06, s * 0.09, '#fff6c2');
+  } else if (B.kind === 'look') {
+    // a purple pennant and a star over both scope and lamp
+    c.strokeStyle = S.ink || '#2b2340'; c.lineWidth = Math.max(1, s * 0.02); c.beginPath(); c.moveTo(s * 0.5, s * 0.06); c.lineTo(s * 0.5, -s * 0.12); c.stroke();
+    c.beginPath(); c.moveTo(s * 0.5, -s * 0.12); c.lineTo(s * 0.76, -s * 0.06); c.lineTo(s * 0.5, s * 0.0); c.closePath(); c.fillStyle = '#b07cff'; c.fill(); inkStroke(c, S, ow * 0.5);
+    c.beginPath(); c.arc(s * 0.5, s * 0.43, s * 0.07, 0, 7); c.fillStyle = '#ffd23f'; c.fill(); inkStroke(c, S, ow * 0.6);
+    star(c, s * 0.5, s * 0.2, s * 0.08, '#ffffff');
+  }
+}
+// a charm medallion with its symbol
+function drawCharm(c, x, y, r, id, S) {
+  const H = CHARMS[id] || { col: '#eee' }, ink = S.ink || '#2b2340', lw = Math.max(1, r * 0.12);
+  c.save(); c.translate(x, y);
+  c.beginPath(); c.arc(0, -r * 1.02, r * 0.2, 0, 7); c.strokeStyle = '#d9a400'; c.lineWidth = lw; c.stroke();
+  c.beginPath(); c.arc(0, 0, r, 0, 7); c.fillStyle = H.col; c.fill(); c.lineWidth = lw; c.strokeStyle = S.ink ? ink : '#d9a400'; c.stroke();
+  c.beginPath(); c.arc(0, 0, r * 0.84, 0, 7); c.strokeStyle = 'rgba(217,164,0,.7)'; c.lineWidth = lw * 0.7; c.stroke();
+  c.lineCap = 'round'; c.lineJoin = 'round';
+  if (id === 'globe') {
+    c.strokeStyle = '#3f8fd9'; c.lineWidth = r * 0.13;
+    c.beginPath(); for (let k = 0; k < 3; k++) { const a = k * Math.PI / 3; c.moveTo(Math.cos(a) * r * 0.55, Math.sin(a) * r * 0.55); c.lineTo(-Math.cos(a) * r * 0.55, -Math.sin(a) * r * 0.55); } c.stroke();
+  } else if (id === 'seed') {
+    c.strokeStyle = '#2f7d32'; c.lineWidth = r * 0.12; c.beginPath(); c.moveTo(0, r * 0.55); c.lineTo(0, -r * 0.1); c.stroke();
+    c.fillStyle = '#3f9a3a'; c.beginPath(); c.ellipse(-r * 0.25, -r * 0.2, r * 0.3, r * 0.15, -0.6, 0, 7); c.fill(); c.beginPath(); c.ellipse(r * 0.25, -r * 0.3, r * 0.3, r * 0.15, 0.6, 0, 7); c.fill();
+    c.fillStyle = '#2f6d2b'; for (const s2 of [-1, 1]) { c.beginPath(); c.moveTo(0, r * 0.25); c.lineTo(s2 * r * 0.16, r * 0.18); c.lineTo(0, r * 0.11); c.fill(); }
+  } else if (id === 'pick') {
+    c.strokeStyle = '#8a5a35'; c.lineWidth = r * 0.16; c.beginPath(); c.moveTo(-r * 0.45, r * 0.5); c.lineTo(r * 0.3, -r * 0.25); c.stroke();
+    c.strokeStyle = '#e5a800'; c.lineWidth = r * 0.18; c.beginPath(); c.arc(r * 0.05, r * 0.05, r * 0.6, -Math.PI * 0.62, -Math.PI * 0.08); c.stroke();
+  } else if (id === 'glass') {
+    c.save(); c.rotate(-0.5);
+    c.fillStyle = '#b07537'; rr(c, -r * 0.6, -r * 0.14, r * 1.2, r * 0.28, r * 0.06); c.fill();
+    c.fillStyle = '#8a5a35'; rr(c, r * 0.35, -r * 0.2, r * 0.3, r * 0.4, r * 0.06); c.fill();
+    c.fillStyle = '#7fc8ff'; c.beginPath(); c.arc(r * 0.62, 0, r * 0.14, 0, 7); c.fill(); c.restore();
+  } else if (id === 'clover') {
+    c.fillStyle = '#2f9e50'; for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + Math.PI / 4; c.beginPath(); c.arc(Math.cos(a) * r * 0.26, Math.sin(a) * r * 0.26 - r * 0.05, r * 0.24, 0, 7); c.fill(); }
+    c.strokeStyle = '#2f7d32'; c.lineWidth = r * 0.1; c.beginPath(); c.moveTo(0, r * 0.1); c.quadraticCurveTo(r * 0.1, r * 0.4, r * 0.3, r * 0.6); c.stroke();
+  } else if (id === 'locket') {
+    c.save(); c.scale(r / 14, r / 14); c.translate(-12, -12.5);
+    const hp = new Path2D('M12 20.5s-7.5-4.6-9.2-9.4C1.6 7.6 3.9 4.5 7.2 4.5c2 0 3.5 1.1 4.8 2.8 1.3-1.7 2.8-2.8 4.8-2.8 3.3 0 5.6 3.1 4.4 6.6-1.7 4.8-9.2 9.4-9.2 9.4z');
+    c.fillStyle = '#e2445c'; c.fill(hp); c.lineWidth = 2; c.strokeStyle = '#d9a400'; c.stroke(hp); c.restore();
+  } else if (id === 'piggy') {
+    c.fillStyle = '#ff9ab5'; c.beginPath(); c.moveTo(-r * 0.5, -r * 0.25); c.lineTo(-r * 0.32, -r * 0.62); c.lineTo(-r * 0.15, -r * 0.3); c.moveTo(r * 0.5, -r * 0.25); c.lineTo(r * 0.32, -r * 0.62); c.lineTo(r * 0.15, -r * 0.3); c.fill();
+    c.beginPath(); c.arc(0, r * 0.05, r * 0.52, 0, 7); c.fill();
+    c.fillStyle = '#ff7aa0'; c.beginPath(); c.ellipse(0, r * 0.18, r * 0.24, r * 0.17, 0, 0, 7); c.fill();
+    c.fillStyle = ink; for (const s2 of [-1, 1]) { c.beginPath(); c.arc(s2 * r * 0.09, r * 0.18, r * 0.05, 0, 7); c.fill(); c.beginPath(); c.arc(s2 * r * 0.22, -r * 0.12, r * 0.06, 0, 7); c.fill(); }
+  } else if (id === 'magnet') {
+    c.strokeStyle = '#e2443c'; c.lineWidth = r * 0.26; c.lineCap = 'butt'; c.beginPath(); c.arc(0, -r * 0.05, r * 0.4, Math.PI, 0); c.lineTo(r * 0.4, r * 0.35); c.moveTo(-r * 0.4, -r * 0.05); c.lineTo(-r * 0.4, r * 0.35); c.stroke();
+    c.strokeStyle = '#c9ced8'; c.beginPath(); c.moveTo(-r * 0.4, r * 0.35); c.lineTo(-r * 0.4, r * 0.6); c.moveTo(r * 0.4, r * 0.35); c.lineTo(r * 0.4, r * 0.6); c.stroke();
+  }
+  c.beginPath(); c.ellipse(-r * 0.35, -r * 0.45, r * 0.18, r * 0.09, -0.6, 0, 7); c.fillStyle = 'rgba(255,255,255,.55)'; c.fill();
+  c.restore();
+}
+// owned charms, in a row under the minimap
+function drawCharmsHud(S) {
+  const g = G; if (!g || !g.charms.length || !ui.started) return;
+  const r = ui.touch ? 12 : 11, x0 = 16 + SAFE.l + r + 2, mw = clamp(VW * 0.15, 90, 170), y0 = view.mode === 'cam' ? view.ft + 4 + mw * g.H / g.W + r + 16 : view.ft + r + 12;
+  g.charms.forEach((id, i) => {
+    const x = x0 + i * (r * 2 + 8);
+    cx.globalAlpha = id === 'locket' && g.locketUsed ? 0.4 : 1;
+    drawCharm(cx, x, y0, r, id, S);
+  });
+  cx.globalAlpha = 1;
 }
 // a little speech bubble over a building that needs you
 function bubble(c, x, y, S, now, kind) {
@@ -2702,14 +3010,15 @@ function ghostInfo() {
   const g = G, w = ui.hover;
   if (!g || !w || g.over || !ui.tool) return null;
   if (w.x < 0 || w.y < 0 || w.x >= g.W || w.y >= g.H) return null;
-  if (ui.tool === 'up') {
+  const own = ui.tool !== 'raze' ? bldAt(w) : null;
+  if (ui.tool === 'up' || (own && !own.ruin)) {
     const B = bldAt(w); if (!B) return null;
     const u = upInfo(B);
     return { up: true, B, u, ok: !!u && u.act !== 'max' && g.gold >= u.cost && Math.hypot(B.x + 1 - g.p.x, B.y + 1 - g.p.y) <= g.reach + 0.75 };
   }
   if (ui.tool === 'raze') {
     const id = g.bmap[(w.y | 0) * g.W + (w.x | 0)];
-    if (id < 0) return null;
+    if (id < 0) { const f = fellInfo(w); return f ? { raze: true, fell: f.win, ok: f.ok } : null; }
     const B = g.bld.get(id);
     return { raze: true, B, ok: Math.hypot(B.x + 1 - g.p.x, B.y + 1 - g.p.y) <= g.reach + 0.75 };
   }
@@ -2718,16 +3027,21 @@ function ghostInfo() {
   return { bx, by, r, ok: r === 'ok', push };
 }
 // a gold outline and a price tag over the building Fix & upgrade will act on
-function upMark(B, u, ok, S, alpha) {
-  const x = X(B.x), y = Y(B.y), s = 2 * ts, col = ok ? (S.gold || '#ffd84d') : 'rgba(150,150,160,.9)';
+function upMark(B, u, ok, S, alpha, hold = 0, quiet = false) {
+  const x = X(B.x), y = Y(B.y), s = 2 * ts, col = ok ? (u && u.act === 'evo' ? '#b07cff' : S.gold || '#ffd84d') : 'rgba(150,150,160,.9)';
   cx.globalAlpha = alpha;
-  rr(cx, x - 2, y - 2, s + 4, s + 4, ts * 0.35); cx.setLineDash([ts * 0.22, ts * 0.14]); cx.lineWidth = Math.max(2.5, ts * 0.12); cx.strokeStyle = col; cx.stroke(); cx.setLineDash([]);
-  const text = !u ? "Can't" : u.act === 'fix' ? `Fix · ${u.cost}` : u.act === 'up' ? `${u.label} · ${u.cost}` : 'Max level';
-  cx.font = `${S.fw} ${Math.max(11, ts * 0.5)}px ${S.font}`; const tw = cx.measureText(text).width, ph = Math.max(16, ts * 0.72), py = y - ph - ts * 0.35;
-  rr(cx, x + s / 2 - tw / 2 - 8, py, tw + 16, ph, ph / 2); cx.fillStyle = S.panel || '#fff'; cx.fill(); cx.lineWidth = 2; cx.strokeStyle = col; cx.stroke();
+  if (!quiet) { rr(cx, x - 2, y - 2, s + 4, s + 4, ts * 0.35); cx.setLineDash([ts * 0.22, ts * 0.14]); cx.lineWidth = Math.max(2.5, ts * 0.12); cx.strokeStyle = col; cx.stroke(); cx.setLineDash([]); }
+  const text = !u ? "Can't" : u.act === 'fix' ? `Fix · ${u.cost}` : u.act === 'up' || u.act === 'evo' ? `${u.label} · ${u.cost}` : 'Max level';
+  const big = ui.touch && !quiet, fs = big ? Math.max(13, ts * 0.55) : Math.max(11, ts * 0.5);
+  cx.font = `${S.fw} ${fs}px ${S.font}`; const tw = cx.measureText(text).width, ph = big ? Math.max(26, ts * 0.9) : Math.max(16, ts * 0.72), py = y - ph - ts * 0.35;
+  const bx = x + s / 2 - tw / 2 - 8, bw = tw + 16;
+  rr(cx, bx, py, bw, ph, ph / 2); cx.fillStyle = S.panel || '#fff'; cx.fill();
+  if (hold > 0) { cx.save(); rr(cx, bx, py, bw, ph, ph / 2); cx.clip(); cx.fillStyle = S.gold || '#ffd84d'; cx.globalAlpha = alpha * 0.75; cx.fillRect(bx, py, bw * Math.min(1, hold), ph); cx.restore(); cx.globalAlpha = alpha; }
+  rr(cx, bx, py, bw, ph, ph / 2); cx.lineWidth = 2; cx.strokeStyle = col; cx.stroke();
   const [pr, pg, pb] = rgb(S.panel || '#ffffff'), dark = pr * 0.3 + pg * 0.59 + pb * 0.11 < 128;
-  cx.fillStyle = !ok ? (S.bad || '#c33') : dark ? '#ffffff' : (S.ink || '#222'); cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(text, x + s / 2, py + ph / 2 + 1);
+  cx.fillStyle = !ok ? (S.bad || '#c33') : dark && hold < 0.5 ? '#ffffff' : (S.ink || '#222'); cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(text, x + s / 2, py + ph / 2 + 1);
   cx.globalAlpha = 1;
+  return { x: bx, y: py, w: bw, h: ph };
 }
 function gapTiles(bx, by) {
   const g = G, out = [];
@@ -2811,11 +3125,12 @@ function draw(now) {
   }
   drawPOIs(S, K, now, 'ground');
   if (g.mounds) for (const m of g.mounds) {
-    const k = clamp((g.t - m.t) / TELE, 0, 1), sh = reduced ? 0 : Math.sin(now * 30) * ts * 0.04 * k, r = ts * (0.45 + 0.4 * k);
-    cx.beginPath(); cx.ellipse(X(m.x) + sh, Y(m.y) + ts * 0.25, r * 1.2, r * 0.6, 0, 0, 7); cx.fillStyle = S.dug || '#8a5a35'; cx.globalAlpha = 0.85; cx.fill(); cx.globalAlpha = 1;
+    const k = clamp((g.t - m.t) / TELE, 0, 1), sh = reduced ? 0 : Math.sin(now * 30) * ts * 0.04 * k, r = ts * (0.45 + 0.4 * k), mcol = g.forest ? '#4f9a43' : (S.dug || '#8a5a35');
+    cx.beginPath(); cx.ellipse(X(m.x) + sh, Y(m.y) + ts * 0.25, r * 1.2, r * 0.6, 0, 0, 7); cx.fillStyle = mcol; cx.globalAlpha = 0.85; cx.fill(); cx.globalAlpha = 1;
     if (S.ink) inkStroke(cx, S, Math.max(1.5, ts * 0.06));
-    for (let j = 0; j < 3; j++) { const a = now * 3 + j * 2.1; cx.beginPath(); cx.arc(X(m.x) + Math.cos(a) * r, Y(m.y) - r * 0.2 + Math.sin(a * 1.3) * r * 0.3, ts * 0.08, 0, 7); cx.fillStyle = S.dug || '#8a5a35'; cx.fill(); }
+    for (let j = 0; j < 3; j++) { const a = now * 3 + j * 2.1; cx.beginPath(); cx.arc(X(m.x) + Math.cos(a) * r, Y(m.y) - r * 0.2 + Math.sin(a * 1.3) * r * 0.3, ts * 0.08, 0, 7); cx.fillStyle = mcol; cx.fill(); }
   }
+  if (g.forest) drawTrees(S, K);
   const cm = ts * 2, inView = (x, y, w) => x > -w - cm && y > -w - cm && x < VW + cm && y < VH + cm;
   const shown = [];
   for (const B of g.bld.values()) { const x = X(B.x), y = Y(B.y); if (inView(x, y, 2 * ts)) { if (B.kind === 'mud') drawBuilding(cx, B, x, y, 2 * ts, S, K, now); else shown.push(B); } }
@@ -2824,7 +3139,13 @@ function draw(now) {
   if (ui.tool === 'tower' || ui.tool === 'look') for (const B of g.bld.values()) if (B.kind === 'look' && B.br === 'spot' && !B.ruin) {
     cx.beginPath(); cx.arc(X(B.x + 1), Y(B.y + 1), (SPOT_R[B.lv || 1] + 1) * ts, 0, 7); cx.setLineDash([ts * 0.2, ts * 0.2]); cx.lineWidth = Math.max(1.5, ts * 0.06); cx.strokeStyle = '#3f8fd9'; cx.globalAlpha = 0.7; cx.stroke(); cx.setLineDash([]); cx.globalAlpha = 1;
   }
+  ui.tagRect = null;
   if (gh && gh.up) upMark(gh.B, gh.u, gh.ok, S, 1);
+  else if (g.near && ui.started && !g.over && !ui.pad && ui.tool !== 'up') {
+    const n = g.near, h = ui.hold && ui.hold.id === n.B.id ? ui.hold.t / HOLD_UP : 0;
+    const r = upMark(n.B, n.u, n.ok, S, n.ok ? 0.95 : 0.6, h, !n.ok);
+    ui.tagRect = { ...r, id: n.B.id };
+  }
   if (gh && !gh.raze && !gh.up) {
     const x = X(gh.bx), y = Y(gh.by), s = 2 * ts, col = gh.ok ? S.ok : S.bad;
     cx.globalAlpha = 0.5; rr(cx, x + 2, y + 2, s - 4, s - 4, ts * 0.3); cx.fillStyle = col; cx.fill(); cx.globalAlpha = 1;
@@ -2850,7 +3171,7 @@ function draw(now) {
     }
   }
   if (gh && gh.raze) {
-    const B = gh.B, x = X(B.x), y = Y(B.y), s = 2 * ts, col = gh.ok ? S.bad : 'rgba(128,128,128,.8)';
+    const B = gh.fell ? { x: gh.fell.ax, y: gh.fell.ay } : gh.B, x = X(B.x), y = Y(B.y), s = (gh.fell && gh.fell.one ? 1 : 2) * ts, col = gh.ok ? S.bad : 'rgba(128,128,128,.8)';
     rr(cx, x + 1, y + 1, s - 2, s - 2, ts * 0.3); cx.strokeStyle = col; cx.lineWidth = 3; cx.stroke();
     cx.beginPath(); cx.moveTo(x + s * 0.25, y + s * 0.25); cx.lineTo(x + s * 0.75, y + s * 0.75); cx.moveTo(x + s * 0.75, y + s * 0.25); cx.lineTo(x + s * 0.25, y + s * 0.75); cx.stroke();
   }
@@ -2986,6 +3307,7 @@ function draw(now) {
     cx.fill();
   }
   drawMinimap(S, K, now);
+  drawCharmsHud(S);
   drawAlerts(S, K, now);
 
   if (ui.joy) {
@@ -3046,10 +3368,10 @@ function drawMinimap(S, K, now) {
     mmAt = now;
     const c = mmCv.getContext('2d'), img = c.createImageData(g.W, g.H), d = img.data;
     const ground = rgb(S.toon ? S.grass : S.board), rock = rgb(S.rock), fogc = rgb(S.fogNew);
-    const kc = { wall: rgb(S.wall), tower: rgb(S.tower), mine: rgb(S.toon ? S.gold : S.mine), scare: [224, 90, 90], look: [217, 83, 79] }, water = rgb(S.water || S.rock);
+    const kc = { wall: rgb(S.wall), tower: rgb(S.tower), mine: rgb(S.toon ? S.gold : S.mine), scare: [224, 90, 90], look: [217, 83, 79] }, water = rgb(S.water || S.rock), treeC = [47, 125, 58];
     for (let i = 0; i < g.W * g.H; i++) {
       const id = g.bmap[i];
-      const col = (g.fog && !g.seen[i]) ? fogc : id >= 0 ? (kc[g.bld.get(id).kind] || rock) : g.water[i] ? water : g.rock[i] ? rock : ground;
+      const col = (g.fog && !g.seen[i]) ? fogc : id >= 0 ? (kc[g.bld.get(id).kind] || rock) : g.tree[i] ? treeC : g.water[i] ? water : g.rock[i] ? rock : ground;
       d[i * 4] = col[0]; d[i * 4 + 1] = col[1]; d[i * 4 + 2] = col[2]; d[i * 4 + 3] = 255;
     }
     c.putImageData(img, 0, 0);
@@ -3094,7 +3416,8 @@ function drawIcons() {
     const kind = el.dataset.icon, saveTs = ts;
     ts = size / 2.3;
     const pad = (size - 2 * ts) / 2;
-    if (kind === 'fog') {
+    if (kind.startsWith('charm-')) drawCharm(c, size / 2, size * 0.55, size * 0.36, kind.slice(6), S);
+    else if (kind === 'fog') {
       const [fr, fg, fb] = rgb(S.fogNew);
       rr(c, size * 0.06, size * 0.06, size * 0.88, size * 0.88, size * 0.2); c.fillStyle = S.toon ? S.grass : S.board; c.fill();
       c.save(); c.clip();
@@ -3157,7 +3480,7 @@ function updateHud() {
     const ready = canPick(), done = false;
     rb.classList.toggle('ready', ready); rb.classList.toggle('done', done);
     rb.style.setProperty('--p', `${done ? 100 : Math.round(100 * clamp(g.rp / researchCost(g.picks), 0, 1))}%`);
-    setText('rbLbl', g.free > 0 ? 'Free upgrade!' : ready ? 'Pick an upgrade!' : g.gold >= buyPrice() ? `Buy one · ${buyPrice()}` : 'Upgrades');
+    setText('rbLbl', g.charmPick > 0 ? 'Pick a charm!' : g.free > 0 ? 'Free upgrade!' : ready ? 'Pick an upgrade!' : g.gold >= buyPrice() ? `Buy one · ${buyPrice()}` : 'Upgrades');
     if (ui.research) { const key = `${g.picks}|${ready}|${g.free}`; if (hudCache.resKey !== key) { hudCache.resKey = key; renderCards(); } else updateResearchTitle(); }
   }
   document.querySelectorAll('.tool[data-tool]').forEach(b => { const k = b.dataset.tool; if (COST[k]) b.classList.toggle('poor', g.gold < COST[k]); });
@@ -3191,12 +3514,13 @@ function toast(msg) {
 function show(id) { for (const o of ['#ovStart', '#ovPause', '#ovEnd', '#ovTune']) $(o).hidden = o !== id; }
 function startRun() {
   if (!G || G.t > 0 || G.over) newGame();
+  coachStart();
   updatePalette();
   ui.started = true; ui.paused = false; show(null);
   recStart(G);
-  closeResearch(); audioStart(); if (ui.touch) tip('pad'); tip('start');
+  closeResearch(); audioStart(); if (!G.coach) { if (ui.touch) tip('pad'); tip('start'); }
 }
-function restart() { closeResearch(); newGame(); recStart(G); updatePalette(); ui.started = true; ui.paused = false; show(null); audioStart(); if (ui.touch) tip('pad'); tip('start'); }
+function restart() { closeResearch(); newGame(); coachStart(); recStart(G); updatePalette(); ui.started = true; ui.paused = false; show(null); audioStart(); if (!G.coach) { if (ui.touch) tip('pad'); tip('start'); } }
 function cycleStyle() { setStyle(ORDER[(ORDER.indexOf(cfg.style) + 1) % ORDER.length]); }
 function updateSoundBtn() { $('#bSound').setAttribute('aria-pressed', String(cfg.sound || cfg.music)); $('#bSound').setAttribute('aria-label', cfg.sound || cfg.music ? 'Mute' : 'Unmute'); }
 function pause(on) {
@@ -3204,6 +3528,36 @@ function pause(on) {
   ui.paused = on; show(on ? '#ovPause' : null);
   if (on) closeResearch();
   keys.clear(); ui.joy = null; ui.joyPtr = null; endPadNow();
+}
+// First runs only: two steps (move, then build) before the first wave comes. Done once, remembered in this browser.
+function coachStart() {
+  const g = G; if (!g) return;
+  // automated test browsers skip it unless a test asks for it
+  g.coach = store.get('stampede-coach') === 'done' || (navigator.webdriver && !window.__coachTest) ? null : { step: 0, t: 0 };
+  coachShow();
+}
+function coachText() {
+  const c = G && G.coach; if (!c) return null;
+  if (c.step === 0) return ui.touch ? ['Run', 'Drag anywhere on the left side of the screen to run.'] : ['Run', 'Move with WASD or the arrow keys.'];
+  return ui.touch ? ['Build', 'Tap the big round button to drop a wall behind you. Hold it to aim; time slows down while you do.'] : ['Build', 'Click right next to you to build a wall. Keys 1, 2 and 3 pick a wall, tower or mine.'];
+}
+function coachShow() {
+  const el = $('#coach'), t = coachText();
+  el.hidden = !t;
+  if (t) { $('#coachStep').textContent = t[0]; $('#coachText').textContent = t[1]; el.classList.toggle('touch', ui.touch); el.dataset.step = G.coach.step; }
+}
+function coachDone(skipped) {
+  const g = G; if (!g || !g.coach) return;
+  g.coach = null; store.set('stampede-coach', 'done'); coachShow();
+  if (!skipped) toast('Nice! The herd is coming. Keep walls between you and them.');
+  g.nextWave = Math.max(g.nextWave, g.t + 5);
+}
+function coachTick(g, moving, dt) {
+  const c = g.coach;
+  if (c.step === 0 && moving) { c.t += dt; if (c.t > 0.9) { c.step = 1; coachShow(); } }
+  else if (c.step === 1 && g.built > 0) coachDone(false);
+  // the first wave waits for you (up to 40 s)
+  if (g.coach && g.t < 40) g.nextWave = Math.max(g.nextWave, g.t + 5);
 }
 function showEnd() {
   const g = G, won = g.over === 'won';
@@ -3216,6 +3570,12 @@ function showEnd() {
   $('#sSpent').textContent = g.spent;
   $('#sBuilt').textContent = g.built;
   $('#sRazed').textContent = g.razed;
+  // personal best, kept in this browser
+  const best = store.get('stampede-best') || { t: 0, wave: 0 }, score = won ? 1e6 + g.hearts : g.endT, bestScore = best.won ? 1e6 + (best.hearts || 0) : best.t;
+  const isBest = score > bestScore;
+  if (isBest) store.set('stampede-best', { t: Math.round(g.endT), wave: g.wave, won, hearts: g.hearts });
+  $('#endBest').textContent = isBest ? (best.t ? 'New personal best!' : 'Your first run is on the board.') : `Your best: ${best.won ? 'outlasted the herd' : mmss(best.t) + ', wave ' + best.wave}`;
+  $('#endBest').classList.toggle('best', isBest);
   show('#ovEnd');
   fbShow($('#ovEnd .card'), true);
   if (!SITE) $('#bAgain').focus({ preventScroll: true });
@@ -3243,10 +3603,16 @@ function buyPick() {
   recEv('buy', price);
   sfx('chest'); hudCache.resKey = ''; renderCards();
 }
-function canPick() { return !!G && (G.free > 0 || G.rp >= researchCost(G.picks)); }
+function canPick() { return !!G && (G.free > 0 || G.charmPick > 0 || G.rp >= researchCost(G.picks)); }
 const researchReady = canPick;
 function makeOffer() {
   const g = G, lv = g.lv;
+  if (g.charmPick > 0) {
+    const pool = Object.keys(CHARMS).filter(id => !g.charms.includes(id));
+    for (let i = pool.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [pool[i], pool[j]] = [pool[j], pool[i]]; }
+    g.offerType = 'charm'; return pool.slice(0, 3);
+  }
+  g.offerType = 'card';
   const ok = id => { const C = CARDS[id]; if ((lv[id] || 0) >= C.max) return false; return !C.combo || C.combo.every(q => (lv[q] || 0) >= CARDS[q].max); };
   const pool = Object.keys(CARDS).filter(ok), combos = pool.filter(id => CARDS[id].combo), rest = pool.filter(id => !CARDS[id].combo);
   for (let i = rest.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [rest[i], rest[j]] = [rest[j], rest[i]]; }
@@ -3267,9 +3633,12 @@ function renderCards() {
   const g = G; if (!g) return;
   const can = canPick();
   if (can && !g.offer) g.offer = makeOffer();
-  $('#rNote').textContent = cfg.researchPause ? 'The game is paused while you choose. Points come from time and kills; chests give free picks, or buy one with gold.' : 'The game keeps going, but you get a 5-second shield when you open a pick. Points come from time and kills; chests give free picks, or buy one with gold.';
+  $('#rNote').textContent = cfg.researchPause ? 'The game is paused while you choose. Points come from time and kills; chests hold charms (one slot per act) and free picks, or buy one with gold.' : 'The game keeps going, but you get a 5-second shield when you open a pick. Points come from time and kills; chests hold charms (one slot per act) and free picks, or buy one with gold.';
   if (can) {
-    $('#rGrid').innerHTML = g.offer.length ? g.offer.map((id, i) => {
+    $('#rGrid').innerHTML = g.offerType === 'charm' ? g.offer.map((id, i) => {
+      const H = CHARMS[id];
+      return `<button type="button" class="cardup charm" data-card="${id}"><kbd>${i + 1}</kbd><canvas data-icon="charm-${id}"></canvas><b>${H.name}</b><small>${H.text}</small>${H.evo ? `<small class="evo">${H.evoText}</small>` : ''}</button>`;
+    }).join('') : g.offer.length ? g.offer.map((id, i) => {
       const C = CARDS[id], l = g.lv[id] || 0;
       const pips = C.max > 1 ? `<span class="pips">${Array.from({ length: C.max }, (_, k) => `<i class="${k < l ? 'on' : k === l ? 'new' : ''}"></i>`).join('')}</span>` : `<span class="pips"><i class="new"></i></span>`;
       return `<button type="button" class="cardup${C.combo ? ' combo' : ''}${C.unlock ? ' unlock' : ''}" data-card="${id}"><kbd>${i + 1}</kbd><canvas data-icon="${C.icon}"></canvas><b>${C.name}</b>${pips}<small>${C.text}</small></button>`;
@@ -3277,7 +3646,7 @@ function renderCards() {
     $('#rGrid').querySelectorAll('button[data-card]').forEach(btn => btn.addEventListener('click', () => pickCard(btn.dataset.card)));
   } else $('#rGrid').innerHTML = '';
   const owned = Object.entries(g.lv);
-  $('#rOwned').innerHTML = owned.length ? owned.map(([id, l]) => `<span>${CARDS[id].name}${CARDS[id].max > 1 ? ` ${l}/${CARDS[id].max}` : ''}</span>`).join('') : '<span>No upgrades yet</span>';
+  $('#rOwned').innerHTML = g.charms.map(id => `<span class="charm"><canvas data-icon="charm-${id}"></canvas>${CHARMS[id].name}${id === 'locket' && g.locketUsed ? ' (used)' : ''}</span>`).join('') + (owned.length ? owned.map(([id, l]) => `<span>${CARDS[id].name}${CARDS[id].max > 1 ? ` ${l}/${CARDS[id].max}` : ''}</span>`).join('') : g.charms.length ? '' : '<span>No upgrades yet</span>');
   $('#bReroll').hidden = !can || !g.rerolls || !g.offer.length;
   { const b = $('#bBuy'), price = buyPrice(); b.hidden = can; b.textContent = `Buy a pick · ${price} gold`; b.disabled = g.gold < price; }
   $('#bReroll').textContent = `Reroll (${g.rerolls})`;
@@ -3286,16 +3655,21 @@ function renderCards() {
 }
 function updateResearchTitle() {
   const g = G, cost = researchCost(g.picks);
-  $('#rTitle').textContent = g.free > 0 ? (g.lastFree === 'buy' ? 'Bought! Pick your upgrade' : g.lastFree === 'well' ? 'A wish! Pick a free upgrade' : 'Treasure! Pick a free upgrade') : canPick() ? 'Pick an upgrade' : `Next pick in ${Math.ceil(cost - g.rp)} points`;
+  $('#rTitle').textContent = g.charmPick > 0 && g.offerType === 'charm' ? 'Treasure! Pick a charm' : g.free > 0 ? (g.lastFree === 'buy' ? 'Bought! Pick your upgrade' : g.lastFree === 'well' ? 'A wish! Pick a free upgrade' : 'Treasure! Pick a free upgrade') : canPick() ? 'Pick an upgrade' : `Next pick in ${Math.ceil(cost - g.rp)} points`;
 }
 function pickCard(id) {
   const g = G;
   if (!g || g.over || !canPick() || !g.offer) return false;
+  if (g.offerType === 'charm') {
+    if (!g.offer.includes(id) || !CHARMS[id]) return false;
+    g.charmPick--; applyCharm(id);
+  } else {
   if (id === 'gold' && !g.offer.length) g.gold += 25;
   else if (!g.offer.includes(id)) return false;
   if (g.free > 0) g.free--; else { g.rp -= researchCost(g.picks); g.picks++; }
   if (id !== 'gold') applyCard(id);
   recEv('card', id);
+  }
   g.offer = null;
   sfx('research');
   g.wasReady = canPick();
@@ -3318,10 +3692,20 @@ function applyCard(id) {
   toast(`${C.name}${C.max > 1 ? ` ${l}` : ''}!${C.unlock ? ' New building in your build bar.' : ''}`);
   drawIcons();
 }
+function applyCharm(id) {
+  const g = G, H = CHARMS[id];
+  g.charms.push(id);
+  if (id === 'seed') for (const B of g.bld.values()) if (B.kind === 'wall' && !B.ruin) { B.max *= 1.25; B.hp *= 1.25; B.pop = 0.3; }
+  if (id === 'glass') { g.vision += 2; g.visT = 0; }
+  recEv('charm', id);
+  toast(`${H.name}! ${H.text}`);
+  if (H.evo) for (const B of g.bld.values()) if (B.kind === H.evo && !B.ruin && upInfo(B)?.act === 'evo') { tip('evo'); B.pop = 0.3; ring(B.x + 1, B.y + 1, 0.6, 2.4, 'gold'); }
+  drawIcons();
+}
 function reroll() { const g = G; if (!g || !g.rerolls || !canPick()) return; g.rerolls--; g.offer = makeOffer(); renderCards(); sfx('push'); }
 function updatePalette() {
   let n = 0;
-  document.querySelectorAll('.tool[data-tool]').forEach(b => { const t = b.dataset.tool, show = !['mud', 'scare', 'look'].includes(t) || (G && L(t)); b.hidden = !show; if (show) n++; });
+  document.querySelectorAll('.tool[data-tool]').forEach(b => { const t = b.dataset.tool, show = t !== 'up' && (!['mud', 'scare', 'look'].includes(t) || (G && L(t))); b.hidden = !show; if (show) n++; });
   $('#pal').classList.toggle('two', n > 5);
   layout();
 }
@@ -3356,6 +3740,7 @@ const CHOICES = [
   { k: 'monsters', label: 'Muncher types', opts: [['mixed', 'All six'], ['grazers', 'Grazers only']] },
   { k: 'researchPause', label: 'While you pick an upgrade', opts: [[true, 'Pause the game'], [false, 'Keep playing, 5 s shield']] },
   { k: 'spawn', label: 'Munchers come from', opts: [['edges', 'The edges'], ['middle', 'The middle']] },
+  { k: 'biome', label: 'Map', opts: [['winter', 'Winter'], ['forest', 'Forest']] },
   { k: 'map', label: 'Board', opts: [['normal', '32 × 20'], ['big', '48 × 30'], ['huge', '64 × 40'], ['giant', '96 × 60']] },
   { k: 'fog', label: 'Fog of war', opts: [[true, 'On'], [false, 'Off']] },
   { k: 'paths', label: 'Show muncher routes', opts: [[true, 'On'], [false, 'Off']] },
@@ -3366,7 +3751,7 @@ const CHOICES = [
   { k: 'touchHeart', label: 'Extra heart on touch screens', opts: [[true, 'On'], [false, 'Off']] },
   { k: 'phone', label: 'Phone held upright', chips: true, opts: [['left', 'Sideways, top to the left'], ['right', 'Sideways, top to the right'], ['upright', 'Keep it upright']] },
 ];
-const SITE_CHOICES = ['round', 'herd', 'researchPause', 'touchHeart', 'sound', 'music', 'tune', 'tips', 'phone'];
+const SITE_CHOICES = ['biome', 'round', 'herd', 'researchPause', 'touchHeart', 'sound', 'music', 'tune', 'tips', 'phone'];
 function buildTune() {
   const f = $('#tuneForm'); f.innerHTML = '';
   for (const t of SITE ? [] : TUNE) {
@@ -3384,7 +3769,7 @@ function buildTune() {
     const row = document.createElement('div'); row.className = 'field';
     row.innerHTML = `<span>${ch.label}</span><div class="seg${ch.chips ? ' chips' : ''}" role="radiogroup" aria-label="${ch.label}">${ch.opts.map(([v, l]) => `<label><input type="radio" name="c-${ch.k}" id="c-${ch.k}-${v}" value="${v}" ${cfg[ch.k] === v ? 'checked' : ''}>${l}</label>`).join('')}</div>`;
     f.appendChild(row);
-    row.querySelectorAll('input').forEach((inp, i) => inp.addEventListener('change', () => { cfg[ch.k] = ch.opts[i][0]; saveCfg(); applyVolumes(); updateSoundBtn(); $('#startTitle').textContent = `Survive ${mmss(cfg.round)}`; if (ch.k === 'phone') { applyOrient(); layout(); drawIcons(); } }));
+    row.querySelectorAll('input').forEach((inp, i) => inp.addEventListener('change', () => { cfg[ch.k] = ch.opts[i][0]; saveCfg(); applyVolumes(); updateSoundBtn(); $('#startTitle').textContent = `Survive ${mmss(cfg.round)}`; if (ch.k === 'phone') { applyOrient(); layout(); drawIcons(); } if (ch.k === 'biome') setBiome(cfg.biome); }));
   }
   const again = document.createElement('div'); again.className = 'row';
   again.innerHTML = '<button class="btn" type="button" id="bTipsAgain">Show tips again</button>';
@@ -3397,26 +3782,51 @@ function buildTune() {
 function toWorld(l) { return { x: (l.x - ox) / ts, y: (l.y - oy) / ts }; }
 function act(w) {
   if (!G || G.over || !ui.started || ui.paused || !ui.tool || (ui.research && cfg.researchPause)) return false;
-  const ok = ui.tool === 'raze' ? razeAt(w) : ui.tool === 'up' ? upgradeAt(w) : tryBuild(w);
+  const own = ui.tool !== 'raze' && ui.tool !== 'up' ? bldAt(w) : null;
+  const ok = ui.tool === 'raze' ? razeAt(w) : ui.tool === 'up' || (own && !own.ruin) ? upgradeAt(w) : tryBuild(w);
   if (ok && ui.touch && navigator.vibrate) try { navigator.vibrate(12); } catch (err) { /* no buzz */ }
   return ok;
 }
 
+// The building a hold of Space / X (or a tap on its price tag) acts on.
+function upPick(prevId) {
+  const g = G, p = g.p;
+  let best = null, bs = Infinity;
+  for (const B of g.bld.values()) {
+    if (B.ruin || B.kind === 'mud') continue;
+    const d = Math.hypot(B.x + 1 - p.x, B.y + 1 - p.y); if (d > g.reach + 0.75) continue;
+    const u = upInfo(B); if (!u || u.act === 'max') continue;
+    const sc = d - (u.act === 'fix' ? 3 : 0) + (g.gold < u.cost ? 8 : 0) - (B.id === prevId ? 0.6 : 0);
+    if (sc < bs) { bs = sc; best = { x: B.x + 1, y: B.y + 1, ok: g.gold >= u.cost, B, u }; }
+  }
+  return best;
+}
+const HOLD_UP = 0.4;
+function upNear() {
+  const g = G;
+  if (!g || g.over || !ui.started || ui.paused || ui.fork || (ui.research && cfg.researchPause)) return false;
+  const n = g.near || upPick();
+  if (!n) { toast('Stand next to one of your buildings to fix or upgrade it.'); sfx('deny'); return false; }
+  const ok = upgradeAt({ x: n.B.x + 1, y: n.B.y + 1 });
+  if (ok && ui.touch && navigator.vibrate) try { navigator.vibrate(12); } catch (err) { /* no buzz */ }
+  g.near = upPick(n.B.id);
+  return ok;
+}
+// real time, so slow-mo doesn't slow the hold; one upgrade per hold
+function holdTick(dt) {
+  const g = G, h = ui.hold;
+  if (!h) return;
+  if (!g || !g.near || g.over || !ui.started || ui.paused || ui.fork || (ui.research && cfg.researchPause)) { h.t = 0; return; }
+  if (h.id !== g.near.B.id) { h.id = g.near.B.id; h.t = 0; }
+  if (h.done) return;
+  h.t += dt;
+  if (h.t >= HOLD_UP) { h.done = true; upNear(); }
+}
 // The build pad. A tap drops the chosen building right behind you (the way you're running from); a drag aims it
 // anywhere in your ring; dragging far away cancels. Raze taps the nearest building of yours.
 function dropSpot() {
   const g = G, p = g.p, m = Math.hypot(p.fx, p.fy) || 1, fx = p.fx / m, fy = p.fy / m;
-  if (ui.tool === 'up') {
-    // the most useful thing in reach: patch damage first, then the nearest upgrade you can afford
-    let best = null, bs = Infinity;
-    for (const B of g.bld.values()) {
-      const d = Math.hypot(B.x + 1 - p.x, B.y + 1 - p.y); if (d > g.reach + 0.75) continue;
-      const u = upInfo(B); if (!u || u.act === 'max') continue;
-      const sc = d - (u.act === 'fix' ? 3 : 0) + (g.gold < u.cost ? 8 : 0);
-      if (sc < bs) { bs = sc; best = { x: B.x + 1, y: B.y + 1, ok: g.gold >= u.cost, B, u }; }
-    }
-    return best || { x: p.x, y: p.y, ok: false };
-  }
+  if (ui.tool === 'up') return upPick() || { x: p.x, y: p.y, ok: false };
   if (ui.tool === 'raze') {
     let best = null, bd = Infinity;
     for (const B of g.bld.values()) {
@@ -3424,6 +3834,16 @@ function dropSpot() {
       if (d > g.reach + 0.75) continue;
       const sc = d + (dx * fx + dy * fy > 0 ? 0.6 : 0);
       if (sc < bd) { bd = sc; best = { x: B.x + 1, y: B.y + 1, ok: true }; }
+    }
+    if (!best && g.forest) {
+      const r = g.reach + 0.75;
+      for (let ty = Math.max(0, Math.floor(p.y - r)); ty <= Math.min(g.H - 1, Math.floor(p.y + r)); ty++) for (let tx = Math.max(0, Math.floor(p.x - r)); tx <= Math.min(g.W - 1, Math.floor(p.x + r)); tx++) {
+        if (!g.tree[ty * g.W + tx]) continue;
+        const dx = tx + 0.5 - p.x, dy = ty + 0.5 - p.y, d = Math.hypot(dx, dy);
+        if (d > r || !fellWindow(g, tx, ty)) continue;
+        const sc = d + (dx * fx + dy * fy > 0 ? 0.6 : 0);
+        if (sc < bd) { bd = sc; best = { x: tx + 0.5, y: ty + 0.5, ok: true }; }
+      }
     }
     return best || { x: p.x, y: p.y, ok: false };
   }
@@ -3470,6 +3890,7 @@ function endPadNow() { ui.pad = null; ui.padPtr = null; ui.hover = null; $('#pad
 const padEl = $('#pad');
 document.querySelectorAll('#fork button[data-br]').forEach(b => b.addEventListener('click', () => chooseFork(b.dataset.br)));
 $('#forkCancel').addEventListener('click', closeFork);
+$('#coachSkip').addEventListener('click', () => coachDone(true));
 padEl.addEventListener('pointerdown', e => {
   audioStart(); e.preventDefault(); e.stopPropagation();
   if (!G || G.over || !ui.started || ui.paused || ui.padPtr != null || (ui.research && cfg.researchPause)) return;
@@ -3504,14 +3925,17 @@ cv.addEventListener('pointerdown', e => {
   const l = pt(e), w = toWorld(l);
   if (e.pointerType === 'mouse') {
     ui.mouse = true; ui.hover = w;
+    const T = ui.tagRect;
     if (e.button === 2) razeAt(w);
+    else if (e.button === 0 && T && G.near && T.id === G.near.B.id && l.x >= T.x - 4 && l.x <= T.x + T.w + 4 && l.y >= T.y - 4 && l.y <= T.y + T.h + 4) upNear();
     else if (e.button === 0) act(w);
     return;
   }
   e.preventDefault();
   const inBoard = w.x >= -0.5 && w.y >= -0.5 && w.x < G.W + 0.5 && w.y < G.H + 0.5;
   // In landscape the left side always runs, even over your own ring; tapping inside the ring elsewhere builds there.
-  const runSide = VW > VH && l.x < VW * 0.38;
+  const runSide = VW > VH && l.x < VW * 0.38, T = ui.tagRect;
+  if (T && !runSide && G.near && T.id === G.near.B.id && l.x >= T.x - 12 && l.x <= T.x + T.w + 12 && l.y >= T.y - 12 && l.y <= T.y + T.h + 12) { upNear(); return; }
   const near = !!ui.tool && inBoard && !runSide && Math.hypot(w.x - G.p.x, w.y - G.p.y) <= G.reach + 1.6;
   if (near && ui.buildPtr == null) { ui.buildPtr = e.pointerId; ui.hover = w; }
   else if (ui.joyPtr == null) { ui.joyPtr = e.pointerId; ui.joy = { ox: l.x, oy: l.y, x: l.x, y: l.y }; }
@@ -3537,6 +3961,7 @@ addEventListener('keydown', e => {
   if (ui.started) audioStart();
   const k = e.code;
   if (MOVE[k]) { e.preventDefault(); keys.add(k); return; }
+  if (k === 'Space' && ui.started && G && !G.over && !ui.paused && !ui.research) { e.preventDefault(); if (!e.repeat && !ui.hold) ui.hold = { src: 'key', t: 0, id: null, done: false }; return; }
   if (e.repeat) return;
   if (ui.fork) { if (k === 'Digit1') chooseFork('spot'); else if (k === 'Digit2') chooseFork('snipe'); else if (k === 'Escape') closeFork(); e.preventDefault(); return; }
   if (ui.research && ['Digit1', 'Digit2', 'Digit3'].includes(k)) { const id = G && G.offer && G.offer[Number(k.slice(5)) - 1]; if (id) pickCard(id); }
@@ -3549,7 +3974,7 @@ addEventListener('keydown', e => {
   else if (k === 'Digit5' && L('mud')) setTool('mud');
   else if (k === 'Digit6' && L('scare')) setTool('scare');
   else if (k === 'Digit7' && L('look')) setTool('look');
-  else if (k === 'KeyU' || k === 'Digit8') setTool('up');
+  else if (k === 'KeyU') upNear();
   else if (k === 'KeyF' && G && G.nearWell && ui.started && !ui.paused) tossWell();
   else if (k === 'KeyP' || k === 'Escape') { if (!$('#ovTune').hidden) { show(tuneFrom); } else if (ui.started && G && !G.over) pause(!ui.paused); }
   else if (k === 'KeyT') { cycleStyle(); }
@@ -3559,8 +3984,8 @@ addEventListener('keydown', e => {
     else if (!$('#ovEnd').hidden && document.activeElement?.tagName !== 'BUTTON') { e.preventDefault(); restart(); }
   } else if (k === 'KeyR' && (ui.paused || (G && G.over))) restart();
 });
-addEventListener('keyup', e => keys.delete(e.code));
-addEventListener('blur', () => keys.clear());
+addEventListener('keyup', e => { keys.delete(e.code); if (e.code === 'Space' && ui.hold && ui.hold.src === 'key') ui.hold = null; });
+addEventListener('blur', () => { keys.clear(); ui.hold = null; });
 document.addEventListener('visibilitychange', () => { if (document.hidden && ui.started && G && !G.over && !ui.paused) pause(true); if (document.hidden && REC.doc && REC.api) recSave(); });
 
 document.querySelectorAll('.tool').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
@@ -3585,6 +4010,13 @@ $('#bTuneGo').addEventListener('click', () => { if (tuneFrom === '#ovStart') { n
 $('#bTuneReset').addEventListener('click', () => { const st = cfg.style; Object.assign(cfg, DEF, { style: st }); saveCfg(); buildTune(); applyOrient(); layout(); drawIcons(); });
 $('#bTuneClose').addEventListener('click', () => { if (tuneFrom === '#ovStart' && G && G.t === 0) newGame(); layout(); show(tuneFrom); });
 document.querySelectorAll('input[name="style"]').forEach(r => r.addEventListener('change', () => setStyle(r.value)));
+function setBiome(b) {
+  cfg.biome = b === 'forest' ? 'forest' : 'winter'; saveCfg();
+  for (const id of [`bi-${cfg.biome}`, `c-biome-${cfg.biome}`]) { const r = document.getElementById(id); if (r) r.checked = true; }
+  setStyle(cfg.biome === 'forest' ? 'cartoon' : 'winter');
+  if (G && !ui.started) { newGame(); updatePalette(); }
+}
+document.querySelectorAll('input[name="biome"]').forEach(r => r.addEventListener('change', () => setBiome(r.value)));
 document.querySelectorAll('input[name="phone"]').forEach(r => r.addEventListener('change', () => { cfg.phone = r.value; saveCfg(); applyOrient(); layout(); drawIcons(); }));
 document.querySelectorAll('input[name="tune"]').forEach(r => r.addEventListener('change', () => { cfg.tune = r.value; cfg.music = true; saveCfg(); audioStart(); applyVolumes(); updateSoundBtn(); AU.step = 0; ui.preview = true; }));
 addEventListener('resize', () => { applyOrient(); layout(); drawIcons(); });
@@ -3645,6 +4077,54 @@ function drawFps() {
 }
 const FS = { gaps: [], step: [], draw: [], hud: [] };
 const fsPush = (a, v) => { a.push(v); if (a.length > 240) a.shift(); };
+// ---------------------------------------------------------------- controller
+// Left stick or d-pad runs; A builds behind you, X fixes or upgrades the nearest building, B and the bumpers switch
+// what you build, Y opens upgrades, Start pauses. In menus and pop-ups the stick or d-pad moves between buttons,
+// A presses, B backs out.
+const GP = { prev: [], seen: false, menuT: 0 };
+function gpMenuRoot() {
+  if (!$('#fork').hidden) return $('#fork');
+  if (ui.research) return $('#research');
+  for (const o of ['#ovStart', '#ovPause', '#ovEnd', '#ovTune']) if (!$(o).hidden) return $(o);
+  return null;
+}
+function gpFocusables(rootEl) { return [...rootEl.querySelectorAll('button, [role="button"], input, select')].filter(b => !b.disabled && !b.hidden && b.offsetParent !== null && b.id !== 'pad'); }
+function gpMove(rootEl, dir) {
+  const list = gpFocusables(rootEl); if (!list.length) return;
+  const i = list.indexOf(document.activeElement);
+  const next = i < 0 ? list[0] : list[(i + dir + list.length) % list.length];
+  next.focus(); next.classList.add('gp-focus'); setTimeout(() => next.classList.remove('gp-focus'), 1200);
+}
+function gpPoll() {
+  let pads = []; try { pads = navigator.getGamepads ? navigator.getGamepads() : []; } catch (err) { return; }
+  let gp = null; for (const p of pads) if (p && p.connected) { gp = p; break; }
+  if (!gp) { ui.gp = null; return; }
+  if (!GP.seen) { GP.seen = true; toast('Controller connected. A builds, hold X by a building to upgrade it, B switches, Start pauses.'); }
+  const b = i => !!(gp.buttons[i] && gp.buttons[i].pressed), was = i => !!GP.prev[i], press = i => b(i) && !was(i);
+  const ax = gp.axes[0] || 0, ay = gp.axes[1] || 0, dx = (b(15) ? 1 : 0) - (b(14) ? 1 : 0), dy = (b(13) ? 1 : 0) - (b(12) ? 1 : 0);
+  const menu = gpMenuRoot();
+  if (menu) {
+    ui.gp = null;
+    const dir = dx || dy || (Math.abs(ax) > 0.6 ? Math.sign(ax) : Math.abs(ay) > 0.6 ? Math.sign(ay) : 0);
+    GP.menuT -= 1 / 60;
+    if (dir && GP.menuT <= 0) { gpMove(menu, dir); GP.menuT = 0.22; } else if (!dir) GP.menuT = 0;
+    if (press(0)) { const a = document.activeElement; if (a && menu.contains(a) && a !== document.body) a.click(); else gpMove(menu, 1); }
+    if (press(1)) { if (menu.id === 'fork') closeFork(); else if (menu.id === 'research') closeResearch(); else if (menu.id === 'ovPause') pause(false); }
+    if (press(9) && menu.id === 'ovPause') pause(false);
+  } else if (G && ui.started && !G.over && !ui.paused) {
+    ui.gp = { x: ax + dx, y: ay + dy };
+    if (press(0)) { const t = dropSpot(); if (t) act(t); }
+    if (b(2)) { if (!ui.hold) ui.hold = { src: 'gp', t: 0, id: null, done: false }; if (press(2) && !G.near) { toast('Stand next to one of your buildings to fix or upgrade it.'); sfx('deny'); } }
+    else if (ui.hold && ui.hold.src === 'gp') ui.hold = null;
+    if (press(1) || press(5) || press(4)) {
+      const tools = [...document.querySelectorAll('#pal .tool[data-tool]')].filter(x => !x.hidden && !['up', 'raze'].includes(x.dataset.tool)).map(x => x.dataset.tool);
+      const i = tools.indexOf(ui.tool); setTool(tools[(i + (press(4) ? -1 : 1) + tools.length) % tools.length] || 'wall');
+    }
+    if (press(3)) toggleResearch();
+    if (press(9)) pause(true);
+  } else ui.gp = null;
+  GP.prev = gp.buttons.map(x => x.pressed);
+}
 function frame(now) {
   const gap = now - last, dt = Math.min(0.1, gap / 1000); fsPush(FS.gaps, gap); last = now;
   // a slow machine gets a softer, cheaper canvas instead of a choppy game (2x -> 1.5x -> 1x pixels)
@@ -3668,6 +4148,8 @@ function frame(now) {
   else if (ui.research && G && !G.over && !ui.paused) musicTick(false);
   if (G && !ui.paused) { stepFx(dt); clock += dt; }
   if (G && G.over && ui.endTimer > 0) { ui.endTimer -= dt; if (ui.endTimer <= 0) showEnd(); }
+  gpPoll();
+  holdTick(dt);
   updateCamera(dt);
   if (ui.pad) { const t = padTarget(); ui.hover = t && !t.cancel ? t : null; padEl.classList.toggle('cancel', !!(t && t.cancel)); }
   const f2 = performance.now();
@@ -3684,6 +4166,7 @@ root.dataset.style = cfg.style;
 $('#bStyle').textContent = STY[cfg.style].label;
 { const r = document.getElementById(`st-${cfg.style}`); if (r) r.checked = true; }
 { const r = document.getElementById(`tu-${cfg.tune}`); if (r) r.checked = true; }
+{ const r = document.getElementById(`bi-${cfg.biome}`); if (r) r.checked = true; }
 $('#startTitle').textContent = `Survive ${mmss(cfg.round)}`;
 updateSoundBtn();
 applyOrient();
@@ -3696,7 +4179,7 @@ requestAnimationFrame(frame);
 
 // test hooks
 const fitAll = () => { const fw = VW - 32, fh = VH - 32; ts = Math.min(fw / G.W, fh / G.H); view.mode = 'fit'; view.fl = 16; view.ft = 16; view.fr = VW - 16; view.fb = VH - 16; ox = 16 + (fw - G.W * ts) / 2; oy = 16 + (fh - G.H * ts) / 2; boardKey = ''; };
-window.__chase = { openFork, chooseFork, closeFork, spotBoost, SPOT_R, SNIPE, dropSpot, segDist, get frameScale() { return ui.slowmo; }, warm, FEED_R, get bc() { return boardCache; }, get tsv() { return { ts, DPR, VW, VH, ox, oy }; }, draw, updateHud, get frameStats() { return FS; }, get SAFE() { return SAFE; }, FB, fbSend, updateCosts, planWave, fitAll, REC, recSave, herdHp, waveDone, upInfo, upgradeAt, buyPick, tossWell, scrape, wreckStep, maxHp, levelUp, ORE_TILE, pt, applyOrient, padTarget, dropSpot, setTouch, placeControls, get rot() { return rot; }, CARDS, pickCard, applyCard, makeOffer, canPick, startEvent, spawnBoss, waveKinds, updatePalette, TUNES, musicTick, researchReady, openResearch, closeResearch, KINDS, AU, sfx, tipQ, offView, view, pushSpot, covered, MAPS, gapTiles, footprintAt, get G() { return G; }, cfg, newGame, step, place, refreshFields, startRun, restart, setTool, tryBuild, razeAt, checkBuild, ui, layout, setStyle, destroy, spawn, endRun };
+window.__chase = { charmCap, kill, CHARMS, EVO, applyCharm, evolve, HAS, setBiome, fellAt, fellWindow, fellInfo, deepWoods, coveredNear, connected, treeBeside, upPick, upNear, holdTick, get tagRect() { return ui.tagRect; }, act, showEnd, coachStart, coachDone, gpPoll, checkHits, openFork, chooseFork, closeFork, spotBoost, SPOT_R, SNIPE, dropSpot, segDist, get frameScale() { return ui.slowmo; }, warm, FEED_R, get bc() { return boardCache; }, get tsv() { return { ts, DPR, VW, VH, ox, oy }; }, draw, updateHud, get frameStats() { return FS; }, get SAFE() { return SAFE; }, FB, fbSend, updateCosts, planWave, fitAll, REC, recSave, herdHp, waveDone, upInfo, upgradeAt, buyPick, tossWell, scrape, wreckStep, maxHp, levelUp, ORE_TILE, pt, applyOrient, padTarget, dropSpot, setTouch, placeControls, get rot() { return rot; }, CARDS, pickCard, applyCard, makeOffer, canPick, startEvent, spawnBoss, waveKinds, updatePalette, TUNES, musicTick, researchReady, openResearch, closeResearch, KINDS, AU, sfx, tipQ, offView, view, pushSpot, covered, MAPS, gapTiles, footprintAt, get G() { return G; }, cfg, newGame, step, place, refreshFields, startRun, restart, setTool, tryBuild, razeAt, checkBuild, ui, layout, setStyle, destroy, spawn, endRun };
 })();
 </script>
 </body>
