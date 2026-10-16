@@ -3988,10 +3988,16 @@ addEventListener('keyup', e => { keys.delete(e.code); if (e.code === 'Space' && 
 addEventListener('blur', () => { keys.clear(); ui.hold = null; });
 document.addEventListener('visibilitychange', () => { if (document.hidden && ui.started && G && !G.over && !ui.paused) pause(true); if (document.hidden && REC.doc && REC.api) recSave(); });
 
-document.querySelectorAll('.tool').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
+// Buttons used mid-run react the moment a finger lands: phones never send a "click" for a second finger
+// while the first one is steering, so picking a building while running needs touch-down instead.
+function tapBtn(el, fn) {
+  el.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse') return; e.preventDefault(); e.stopPropagation(); el._tapT = performance.now(); audioStart(); fn(e); });
+  el.addEventListener('click', e => { if (performance.now() - (el._tapT || -1e9) < 700) return; fn(e); });
+}
+document.querySelectorAll('.tool').forEach(b => tapBtn(b, () => setTool(b.dataset.tool)));
 $('#bStart').addEventListener('click', startRun);
 $('#bStartTune').addEventListener('click', openTune);
-$('#bPause').addEventListener('click', () => pause(!ui.paused));
+tapBtn($('#bPause'), () => pause(!ui.paused));
 $('#bResume').addEventListener('click', () => pause(false));
 $('#bRestart').addEventListener('click', restart);
 $('#bPauseTune').addEventListener('click', openTune);
@@ -3999,12 +4005,12 @@ $('#bAgain').addEventListener('click', restart);
 $('#bEndTune').addEventListener('click', openTune);
 $('#bTune').addEventListener('click', openTune);
 $('#bSound').addEventListener('click', () => { audioStart(); const on = !(cfg.sound || cfg.music); cfg.sound = on; cfg.music = on; saveCfg(); applyVolumes(); updateSoundBtn(); });
-$('#tip').addEventListener('click', hideTip);
-$('#bResearch').addEventListener('click', () => { audioStart(); toggleResearch(); });
+tapBtn($('#tip'), hideTip);
+tapBtn($('#bResearch'), () => { audioStart(); toggleResearch(); });
 $('#bResearchClose').addEventListener('click', closeResearch);
 $('#bReroll').addEventListener('click', reroll);
 $('#bBuy').addEventListener('click', buyPick);
-$('#bWell').addEventListener('click', () => { audioStart(); tossWell(); });
+tapBtn($('#bWell'), () => { audioStart(); tossWell(); });
 $('#bStyle').addEventListener('click', () => { cycleStyle(); });
 $('#bTuneGo').addEventListener('click', () => { if (tuneFrom === '#ovStart') { newGame(); startRun(); } else restart(); });
 $('#bTuneReset').addEventListener('click', () => { const st = cfg.style; Object.assign(cfg, DEF, { style: st }); saveCfg(); buildTune(); applyOrient(); layout(); drawIcons(); });
