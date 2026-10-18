@@ -2,12 +2,14 @@
 
 Small, colorful web apps by Drew Carlson, plus **Thoughts**, a simple blog.
 
-- **[Trace Race](https://drew2apps.com/apps/trace-race/)**: a daily tracing race, one shape a day for everyone
-- **[RGB](https://drew2apps.com/apps/rgb/)**: mix colors with RGB, HSV, HSL, CMYK, hex or the color box
-- **[Colorize](https://drew2apps.com/apps/colorize/)**: find the one square that's a different color
-- **[Drift](https://drew2apps.com/apps/drift/)**: an ambient color clock (formerly Transition)
+The apps moved to strobi.dev in October 2026 (code in github.com/strobidev/strobi-site), and the home page links to them there:
 
-The same pages power the Android apps on Google Play (wrapped with Capacitor).
+- **[Trace Race](https://strobi.dev/trace-race/)**: a daily tracing race, one shape a day for everyone
+- **[RGB](https://strobi.dev/rgb/)**: mix colors with RGB, HSV, HSL, CMYK, hex or the color box
+- **[Tilery](https://strobi.dev/tilery/)**: 21 brain games on one grid (Colorize grew into it)
+- **[Drift](https://strobi.dev/drift/)**: an ambient color clock (formerly Transition)
+
+`_redirects` sends the old `/apps/...`, `/trace` and `/stampede` links to strobi.dev.
 
 ## How it's built
 
@@ -23,9 +25,7 @@ Cloudflare Pages runs `npm run build` on every push to `main` and publishes `dis
 
 ## Stampede (early test)
 
-`apps/stampede/` is an unlisted test build of a new game (no link from the home page, `noindex`, not in the sitemap). Share it as **drew2apps.com/stampede**.
-
-Each run and any feedback is saved by `functions/api/stampede/[action].js` (a Cloudflare Pages Function) into a D1 database bound to the Pages project as `STAMPEDE_DB`. The tables are created on first use. `build.mjs` skips `functions/` so the source isn't copied into `dist/`.
+Stampede moved to strobi.dev/stampede/ along with its Pages Function and D1 database binding. drew2apps.com/stampede redirects there.
 
 ## Writing a post
 

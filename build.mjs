@@ -182,7 +182,7 @@ ${posts.slice(0, 30).map((p) => `  <item>
 `);
 
 // ---------- 3. sitemap ----------
-const pages = ["/", "/about/", "/privacy/", "/blog/", "/apps/trace-race/", "/apps/rgb/", "/apps/colorize/", "/apps/drift/", ...posts.map((p) => `/blog/${p.slug}/`)];
+const pages = ["/", "/about/", "/privacy/", "/blog/", ...posts.map((p) => `/blog/${p.slug}/`)];
 fs.writeFileSync(path.join(OUT, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${pages.map((u) => `  <url><loc>${SITE}${u}</loc></url>`).join("\n")}

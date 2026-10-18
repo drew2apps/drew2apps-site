@@ -2,13 +2,23 @@
 /projects          /#apps              301
 /recipes           /                   301
 /tutorials         /                   301
-/apps/transition   /apps/drift/        301
-/apps/transition/  /apps/drift/        301
-# short link for sharing Trace Race results
-/trace             /apps/trace-race/   302
-/trace/            /apps/trace-race/   302
-# short link for sharing the Stampede test build
-/stampede          /apps/stampede/     302
-/stampede/         /apps/stampede/     302
+# The apps moved to strobi.dev in October 2026
+/apps/rgb            https://strobi.dev/rgb/               301
+/apps/rgb/*          https://strobi.dev/rgb/:splat         301
+/apps/drift          https://strobi.dev/drift/             301
+/apps/drift/*        https://strobi.dev/drift/:splat       301
+/apps/transition     https://strobi.dev/drift/             301
+/apps/transition/*   https://strobi.dev/drift/             301
+/apps/trace-race     https://strobi.dev/trace-race/        301
+/apps/trace-race/*   https://strobi.dev/trace-race/:splat  301
+/apps/colorize       https://strobi.dev/tilery/            301
+/apps/colorize/*     https://strobi.dev/tilery/            301
+/apps/stampede       https://strobi.dev/stampede/          301
+/apps/stampede/*     https://strobi.dev/stampede/:splat    301
+# short links people already shared
+/trace               https://strobi.dev/trace-race/        301
+/trace/              https://strobi.dev/trace-race/        301
+/stampede            https://strobi.dev/stampede/          301
+/stampede/           https://strobi.dev/stampede/          301
 # splat rules last
 /recipes/*         /                   301
